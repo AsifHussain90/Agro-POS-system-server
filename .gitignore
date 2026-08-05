@@ -1,0 +1,10 @@
+node_modules
+test
+pnpm-lock.yaml
+ARCHITECTURE.md
+.env
+PROJECT_COMPLETION_ROADMAP.md
+CLOUD_STORAGE_SETUP_GUIDE.md
+ARCHITECTURE.md
+public
+project_test.md

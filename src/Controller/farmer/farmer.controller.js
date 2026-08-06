@@ -72,7 +72,7 @@ export const approveFarmerRequest = asyncHandler(async (req, res) => {
   request.approvalDate = new Date();
   await request.save();
 
-  await User.findByIdAndUpdate(request.user, { role: "farmer" });
+  await User.findByIdAndUpdate(request.user || request.userId, { role: "farmer" });
 
   return res
     .status(200)

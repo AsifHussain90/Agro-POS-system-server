@@ -17,6 +17,7 @@ const router = express.Router();
 const localAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  skip: () => process.env.NODE_ENV === "test",
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: "Too many requests, please try again later." },

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * swagger.js
  *
  * OpenAPI 3.0 document for the Agro Marketplace backend.
@@ -40,6 +40,10 @@ export const swaggerDocument = {
     {
       name: "Farmers",
       description: "Farmer application and profile management.",
+    },
+    {
+      name: "FarmerRequests",
+      description: "Farmer request submission and admin workflow operations.",
     },
     { name: "Products", description: "Farmer product catalog endpoints." },
     { name: "Orders", description: "Buyer and farmer order operations." },
@@ -447,6 +451,66 @@ export const swaggerDocument = {
           message: { type: "string", example: "Something went wrong" },
         },
       },
+      FarmerRequestInput: {
+        type: "object",
+        required: ["farmName", "phone", "address", "description"],
+        properties: {
+          farmName: { type: "string", minLength: 3, maxLength: 100, example: "Green Acres Farm" },
+          phone: { type: "string", minLength: 6, maxLength: 20, example: "03001234567" },
+          address: { type: "string", minLength: 5, maxLength: 300, example: "123 Farm Road, Lahore" },
+          description: { type: "string", minLength: 10, maxLength: 1000, example: "Organic wheat and vegetable farm with modern irrigation." },
+          documents: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", example: "Land Ownership Document" },
+                url: { type: "string", format: "uri", example: "https://example.com/doc.pdf" },
+              },
+            },
+          },
+        },
+      },
+      FarmerRequestUpdateInput: {
+        type: "object",
+        properties: {
+          farmName: { type: "string", minLength: 3, maxLength: 100 },
+          phone: { type: "string", minLength: 6, maxLength: 20 },
+          address: { type: "string", minLength: 5, maxLength: 300 },
+          description: { type: "string", minLength: 10, maxLength: 1000 },
+          documents: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                url: { type: "string", format: "uri" },
+              },
+            },
+          },
+        },
+      },
+      ReviewFarmerRequestInput: {
+        type: "object",
+        properties: {
+          reviewMessage: { type: "string", maxLength: 500, example: "Looks good, approved by admin" },
+        },
+      },
+      FarmerRequestResponse: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "64a1b2c3d4e5f6a7b8c9d0e1" },
+          userId: { $ref: "#/components/schemas/SafeUser" },
+          farmName: { type: "string", example: "Green Acres Farm" },
+          phone: { type: "string", example: "03001234567" },
+          address: { type: "string", example: "123 Farm Road, Lahore" },
+          description: { type: "string", example: "Organic wheat and vegetable farm." },
+          status: { type: "string", enum: ["pending", "approved", "rejected"], example: "pending" },
+          reviewMessage: { type: "string", nullable: true, example: null },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
       ValidationErrorDetail: {
         type: "object",
         properties: {
@@ -804,6 +868,228 @@ export const swaggerDocument = {
           },
           400: { $ref: "#/components/responses/ValidationError" },
           401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request": {
+      post: {
+        tags: ["FarmerRequests"],
+        summary: "Create farmer request",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FarmerRequestInput" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Created",
+            content: {
+              "application/json": {
+                schema: successEnvelope(201, "Farmer request submitted", "#/components/schemas/FarmerRequestResponse"),
+              },
+            },
+          },
+          400: { $ref: "#/components/responses/ValidationError" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          409: { $ref: "#/components/responses/Conflict" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+      put: {
+        tags: ["FarmerRequests"],
+        summary: "Update pending farmer request",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/FarmerRequestUpdateInput" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer request updated", "#/components/schemas/FarmerRequestResponse"),
+              },
+            },
+          },
+          400: { $ref: "#/components/responses/ValidationError" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+      delete: {
+        tags: ["FarmerRequests"],
+        summary: "Delete pending farmer request",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer request deleted", null),
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request/me": {
+      get: {
+        tags: ["FarmerRequests"],
+        summary: "Get my farmer requests",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer requests retrieved", {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/FarmerRequestResponse" },
+                }),
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request/admin/farmer-requests": {
+      get: {
+        tags: ["FarmerRequests"],
+        summary: "List all farmer requests (Admin)",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer requests retrieved", {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/FarmerRequestResponse" },
+                }),
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request/admin/farmer-requests/{id}": {
+      get: {
+        tags: ["FarmerRequests"],
+        summary: "Get farmer request by ID (Admin)",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer request retrieved", "#/components/schemas/FarmerRequestResponse"),
+              },
+            },
+          },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request/admin/farmer-requests/{id}/approve": {
+      patch: {
+        tags: ["FarmerRequests"],
+        summary: "Approve farmer request (Admin)",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ReviewFarmerRequestInput" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer request approved", null),
+              },
+            },
+          },
+          400: { $ref: "#/components/responses/ValidationError" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
+          404: { $ref: "#/components/responses/NotFound" },
+          500: { $ref: "#/components/responses/InternalServerError" },
+        },
+      },
+    },
+    "/api/farmer-request/admin/farmer-requests/{id}/reject": {
+      patch: {
+        tags: ["FarmerRequests"],
+        summary: "Reject farmer request (Admin)",
+        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        requestBody: {
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ReviewFarmerRequestInput" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "OK",
+            content: {
+              "application/json": {
+                schema: successEnvelope(200, "Farmer request rejected", "#/components/schemas/FarmerRequestResponse"),
+              },
+            },
+          },
+          400: { $ref: "#/components/responses/ValidationError" },
+          401: { $ref: "#/components/responses/Unauthorized" },
+          403: { $ref: "#/components/responses/Forbidden" },
           404: { $ref: "#/components/responses/NotFound" },
           500: { $ref: "#/components/responses/InternalServerError" },
         },

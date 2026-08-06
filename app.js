@@ -2,6 +2,7 @@ import express from "express";
 import { authRoutes } from "./src/routes/auth.routes.js";
 import { uploadRoutes } from "./src/routes/upload.routes.js";
 import { farmerRoutes } from "./src/routes/farmer.routes.js";
+import { farmerRequestRoutes } from "./src/routes/farmerRequest.routes.js";
 import { productRoutes } from "./src/routes/product.routes.js";
 import { orderRoutes } from "./src/routes/order.routes.js";
 import dotenv from "dotenv";
@@ -51,6 +52,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/farmer-request", farmerRequestRoutes);
 app.use("/api/farmers", farmerRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);

@@ -15,10 +15,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-      
+
     role: {
       type: String,
-      enum: ["user", "admin", "farmer"],
+      enum: ["user", "visitor", "admin", "farmer"],
       default: "user",
     },
     isBlocked: {
@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
     },
     avatar: {
       url: {

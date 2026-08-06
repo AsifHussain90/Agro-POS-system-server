@@ -1,18 +1,25 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
+
 const farmerSchema = new Schema(
   {
-    /**
-     * ONE-TO-ONE REFERENCE TO USER
-     * This field links the farmer profile to exactly one user account.
-     * unique: true enforces the one-to-one constraint at the schema level.
-     */
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User reference is required"],
+      unique: true,
+      index: true,
+    },
     user: {
       type: Schema.Types.ObjectId,
-      ref: "User", // Tells Mongoose which model to populate from
-      required: [true, "User reference is required"],
-      unique: true, // CRITICAL: Enforces one-to-one relationship
-      index: true, // Index for fast lookups by user ID
+      ref: "User",
+      index: true,
+    },
+    requestId: {
+      type: Schema.Types.ObjectId,
+      ref: "FarmerRequest",
+      default: null,
+      index: true,
     },
 
     // ==================== FARMER-SPECIFIC BUSINESS DATA ====================
@@ -32,24 +39,20 @@ const farmerSchema = new Schema(
     location: {
       type: {
         type: String,
-        required: true,
+        default: "Point",
       },
-      //   coordinates: {
-      //     type: [Number],      // [longitude, latitude] — GeoJSON standard order
-      //     default: [0, 0]
-      //   },
       address: {
         street: String,
-        city: { type: String, required: true },
-        state: { type: String, required: true },
-        country: { type: String, default: "India" },
+        city: { type: String, default: "Lahore" },
+        state: { type: String, default: "Punjab" },
+        country: { type: String, default: "Pakistan" },
         zipCode: String,
       },
     },
 
     /** Farm size in acres (business metric for buyers) */
     farmSize: {
-      value: { type: Number, min: 0 },
+      value: { type: Number, min: 0, default: 0 },
       unit: {
         type: String,
         enum: ["acres", "hectares", "sqft"],
@@ -116,7 +119,6 @@ const farmerSchema = new Schema(
       default: false, // Admin verifies farmer before marketplace listing
     },
 
-
     /** Soft delete support (better than hard delete for audit trails) */
     isActive: {
       type: Boolean,
@@ -133,11 +135,15 @@ const farmerSchema = new Schema(
   },
 );
 
-const Farmer = mongoose.model("Farmer", farmerSchema);
-
-farmerSchema.pre("save", function (next) {
-  // Ensure that the user reference is unique before saving
-  if (!this.isModified("user")) return next();
+farmerSchema.pre("validate", function () {
+  if (this.user && !this.userId) {
+    this.userId = this.user;
+  }
+  if (this.userId && !this.user) {
+    this.user = this.userId;
+  }
 });
+
+const Farmer = mongoose.model("Farmer", farmerSchema);
 
 export { Farmer };

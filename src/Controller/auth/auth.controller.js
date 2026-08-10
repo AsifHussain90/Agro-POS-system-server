@@ -16,20 +16,14 @@ const cookieOptions = {
   sameSite: "strict",
 };
 
-const setAuthCookies = (res, accessToken, refreshToken) => {
-  res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
-    maxAge: 15 * 60 * 1000,
-  });
-
+const setRefreshCookie = (res, refreshToken) => {
   res.cookie("refreshToken", refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
-const clearAuthCookies = (res) => {
-  res.clearCookie("accessToken", cookieOptions);
+const clearRefreshCookie = (res) => {
   res.clearCookie("refreshToken", cookieOptions);
 };
 
@@ -48,7 +42,7 @@ export const createAuthController = ({
 } = {}) => {
   const register = asyncHandler(async (req, res) => {
     const data = await authService.register(req.body);
-    setAuthCookies(res, data.accessToken, data.refreshToken);
+    setRefreshCookie(res, data.refreshToken);
 
     return sendResponse(res, 201, "User created", {
       user: data.user,
@@ -58,7 +52,7 @@ export const createAuthController = ({
 
   const login = asyncHandler(async (req, res) => {
     const data = await authService.login(req.body);
-    setAuthCookies(res, data.accessToken, data.refreshToken);
+    setRefreshCookie(res, data.refreshToken);
 
     return sendResponse(res, 200, "Login successful", {
       user: data.user,
@@ -88,7 +82,7 @@ export const createAuthController = ({
       }
     }
 
-    clearAuthCookies(res);
+    clearRefreshCookie(res);
     return sendResponse(res, 200, "Logged out successfully");
   });
 
@@ -117,7 +111,7 @@ export const createAuthController = ({
     const newRefreshToken = refreshTokenGenerator(user);
 
     await user.setRefreshToken(newRefreshToken);
-    setAuthCookies(res, newAccessToken, newRefreshToken);
+    setRefreshCookie(res, newRefreshToken);
 
     return sendResponse(res, 200, "Token refreshed", {
       accessToken: newAccessToken,

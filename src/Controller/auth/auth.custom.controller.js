@@ -15,12 +15,7 @@ const cookieOptions = {
   sameSite: "strict",
 };
 
-const setAuthCookies = (res, accessToken, refreshToken) => {
-  res.cookie("accessToken", accessToken, {
-    ...cookieOptions,
-    maxAge: 15 * 60 * 1000,
-  });
-
+const setRefreshCookie = (res, refreshToken) => {
   res.cookie("refreshToken", refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -32,7 +27,7 @@ const issueTokens = async (user, res) => {
   const refreshToken = generateRefreshToken(user);
 
   await user.setRefreshToken(refreshToken);
-  setAuthCookies(res, accessToken, refreshToken);
+  setRefreshCookie(res, refreshToken);
 
   return { accessToken, refreshToken, user };
 };

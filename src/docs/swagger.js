@@ -51,7 +51,6 @@ export const swaggerDocument = {
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-      accessCookieAuth: { type: "apiKey", in: "cookie", name: "accessToken" },
       refreshCookieAuth: { type: "apiKey", in: "cookie", name: "refreshToken" },
     },
     schemas: {
@@ -718,7 +717,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Auth"],
         summary: "Get current profile",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -741,7 +740,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Auth"],
         summary: "Logout user",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -782,7 +781,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Upload"],
         summary: "Upload profile image",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -817,7 +816,7 @@ export const swaggerDocument = {
       put: {
         tags: ["Upload"],
         summary: "Replace profile image",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -852,7 +851,7 @@ export const swaggerDocument = {
       delete: {
         tags: ["Upload"],
         summary: "Delete profile image",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -877,7 +876,7 @@ export const swaggerDocument = {
       post: {
         tags: ["FarmerRequests"],
         summary: "Create farmer request",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -904,7 +903,7 @@ export const swaggerDocument = {
       put: {
         tags: ["FarmerRequests"],
         summary: "Update pending farmer request",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -931,7 +930,7 @@ export const swaggerDocument = {
       delete: {
         tags: ["FarmerRequests"],
         summary: "Delete pending farmer request",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -951,7 +950,7 @@ export const swaggerDocument = {
       get: {
         tags: ["FarmerRequests"],
         summary: "Get my farmer requests",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -973,7 +972,7 @@ export const swaggerDocument = {
       get: {
         tags: ["FarmerRequests"],
         summary: "List all farmer requests (Admin)",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -996,7 +995,7 @@ export const swaggerDocument = {
       get: {
         tags: ["FarmerRequests"],
         summary: "Get farmer request by ID (Admin)",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1025,7 +1024,7 @@ export const swaggerDocument = {
       patch: {
         tags: ["FarmerRequests"],
         summary: "Approve farmer request (Admin)",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1062,7 +1061,7 @@ export const swaggerDocument = {
       patch: {
         tags: ["FarmerRequests"],
         summary: "Reject farmer request (Admin)",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1099,7 +1098,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Farmers"],
         summary: "Apply as a farmer",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1132,7 +1131,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Farmers"],
         summary: "Get the authenticated farmer profile",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -1156,7 +1155,7 @@ export const swaggerDocument = {
       put: {
         tags: ["Farmers"],
         summary: "Update farmer profile",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1190,7 +1189,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Farmers"],
         summary: "List farmer applications",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -1213,7 +1212,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Farmers"],
         summary: "Get farmer request by id",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1246,7 +1245,7 @@ export const swaggerDocument = {
       patch: {
         tags: ["Farmers"],
         summary: "Approve farmer request",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1279,7 +1278,7 @@ export const swaggerDocument = {
       patch: {
         tags: ["Farmers"],
         summary: "Reject farmer request",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1345,7 +1344,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Products"],
         summary: "Create a product",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1406,7 +1405,7 @@ export const swaggerDocument = {
       put: {
         tags: ["Products"],
         summary: "Update a product",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1446,7 +1445,7 @@ export const swaggerDocument = {
       delete: {
         tags: ["Products"],
         summary: "Delete a product",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         parameters: [
           {
             name: "id",
@@ -1475,7 +1474,7 @@ export const swaggerDocument = {
       post: {
         tags: ["Orders"],
         summary: "Create an order",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -1507,7 +1506,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Orders"],
         summary: "Get orders for the authenticated buyer",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",
@@ -1529,7 +1528,7 @@ export const swaggerDocument = {
       get: {
         tags: ["Orders"],
         summary: "Get orders for the authenticated farmer",
-        security: [{ bearerAuth: [] }, { accessCookieAuth: [] }],
+        security: [{ bearerAuth: [] }],
         responses: {
           200: {
             description: "OK",

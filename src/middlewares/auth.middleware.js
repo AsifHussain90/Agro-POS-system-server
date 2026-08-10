@@ -4,23 +4,13 @@ import ApiError from "../utils/errorHandler.js";
 import { User } from "../model/user.model.js";
 import { getAccessTokenSecret } from "../utils/tokenGenerator.js";
 
-const getAccessTokenFromRequest = (req) => {
-  const cookieToken = req.cookies?.accessToken;
-  if (cookieToken) return cookieToken;
-
+export const verifyJWT = asyncHandler(async (req, res, next) => {
   const header = req.headers?.authorization || req.headers?.Authorization;
-  if (!header) return null;
+  if (!header) throw new ApiError(401, "Unauthorized");
 
   const [scheme, token] = header.split(" ");
-  if (scheme?.toLowerCase() !== "bearer" || !token) return null;
-
-  return token;
-};
-
-export const verifyJWT = asyncHandler(async (req, res, next) => {
-  const token = getAccessTokenFromRequest(req);
-
-  if (!token) throw new ApiError(401, "Unauthorized");
+  if (scheme?.toLowerCase() !== "bearer" || !token)
+    throw new ApiError(401, "Unauthorized");
 
   let decoded;
 

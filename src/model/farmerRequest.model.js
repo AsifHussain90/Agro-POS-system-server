@@ -34,9 +34,15 @@ const addressSchema = new Schema(
   },
   { _id: false }
 );
-
 const locationSchema = new Schema(
   {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+      default: 'Point',
+    },
+
     address: {
       type: addressSchema,
       required: true,
@@ -44,6 +50,7 @@ const locationSchema = new Schema(
   },
   { _id: false }
 );
+
 
 const farmSizeSchema = new Schema(
   {

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { errorHandler } from './src/middlewares/error.middleware.js';
 import { setupSwagger } from './src/docs/swagger.setup.js';
+import farmerRoutes from './src/routes/farmer.route.js'
 
 const app = express();
 
@@ -50,6 +51,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/farmer-request', farmerRequestRoutes);
+app.use('/api/farmer', farmerRoutes);
+
 app.use(errorHandler);
 
 export default app;

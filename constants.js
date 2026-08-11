@@ -1,1 +1,1 @@
-export const DB_NAME = "Agro-POS";
+export const DB_NAME = 'Agro-POS';

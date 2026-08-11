@@ -2,7 +2,12 @@
 //  It provides a function that can be used to send error responses to the client in a standardized format.
 
 class ApiError extends Error {
-  constructor(statusCode, message = "Something went wrong", errors = [], stack = "") {
+  constructor(
+    statusCode,
+    message = 'Something went wrong',
+    errors = [],
+    stack = ''
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.data = null; // Always null for error responses
@@ -19,4 +24,3 @@ class ApiError extends Error {
 }
 
 export default ApiError;
-

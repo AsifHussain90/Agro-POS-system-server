@@ -1,6 +1,6 @@
-import dotenv from "dotenv";
-import { connectDB } from "./src/config/db.js";
-import app from "./app.js";
+import dotenv from 'dotenv';
+import { connectDB } from './src/config/db.js';
+import app from './app.js';
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ dotenv.config();
       console.log(`Server is running on http://localhost:${port}`);
     });
   } catch (error) {
-    console.error("Failed to start server:", error);
+    console.error('Failed to start server:', error);
     process.exitCode = 1;
   }
 })();

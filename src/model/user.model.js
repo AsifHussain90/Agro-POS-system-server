@@ -1,16 +1,16 @@
-import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 const userSchema = new mongoose.Schema(
   {
     fullName: {
       type: String,
-      required: [true, "Name is required"],
+      required: [true, 'Name is required'],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: [true, 'Email is required'],
       unique: true,
       lowercase: true,
       trim: true,
@@ -18,8 +18,8 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["user", "visitor", "admin", "farmer"],
-      default: "user",
+      enum: ['user', 'visitor', 'admin', 'farmer'],
+      default: 'user',
     },
     isBlocked: {
       type: Boolean,
@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: [true, 'Password is required'],
     },
     mustChangePassword: {
       type: Boolean,
@@ -54,11 +54,11 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
 
   this.password = await bcrypt.hash(this.password, 10);
 });
@@ -87,4 +87,4 @@ userSchema.methods.clearRefreshToken = async function () {
   await this.save({ validateBeforeSave: false });
 };
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model('User', userSchema);

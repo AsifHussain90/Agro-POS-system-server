@@ -1,54 +1,101 @@
-import crypto from "crypto";
-import bcrypt from "bcryptjs";
-import ApiError from "../utils/errorHandler.js";
 import { FarmerRequest } from "../model/farmerRequest.model.js";
-import { Farmer } from "../model/farmer.model.js";
 import { User } from "../model/user.model.js";
-
-
-//default email sender function for demonstration purposes, which simply logs the email details to the console. 
-// In a real application, you would replace this with an actual email sending service.
-const defaultEmailSender = async ({ to, subject, html }) => {
-  console.log(`[email] to=${to} subject=${subject} html=${html}`);
-  return true;
-};
-
-// generates a temporary password for the user when their farmer request is approved.
-const generateTemporaryPassword = () =>
-  `Temp-${crypto.randomBytes(4).toString("hex")}`;
+import ApiError from "../utils/errorHandler.js";
 
 export const createFarmerRequestService = ({
   farmerRequestModel = FarmerRequest,
-  farmerModel = Farmer,
   userModel = User,
-  bcryptLib = bcrypt,
-  emailSender = defaultEmailSender,
 } = {}) => ({
   createFarmerRequest: async (userId, payload) => {
-    const existingRequest = await farmerRequestModel.findOne({ userId });
-    if (existingRequest) {
-      throw new ApiError(409, "You already have a farmer request");
+    // 1. Make sure the user exists
+    const user = await userModel
+      .findById(userId)
+      .select("fullName email role");
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
     }
 
-    const request = await farmerRequestModel.create({
+    // 2. Only normal users can request a farmer account
+    if (user.role !== "user") {
+      throw new ApiError(
+        403,
+        "Only users can submit a farmer account request",
+      );
+    }
+
+    // 3. One FarmerRequest per User
+    const existingRequest = await farmerRequestModel.findOne({
       userId,
-      ...payload,
-      status: "pending",
     });
 
-    return request.populate("userId", "fullName email role");
-  },
+    if (existingRequest) {
+      throw new ApiError(
+        409,
+        "You already have a farmer account request",
+      );
+    }
 
-  //gets all farmer requests for a specific user, sorted by creation
-  //  date in descending order, and populates the user details
-  //  (full name, email, and role)for each request.
-  getMyFarmerRequests: async (userId) => {
-    return farmerRequestModel
-      .find({ userId })
-      .sort({ createdAt: -1 })
-      .populate("userId", "fullName email role");
-  },
+    // 4. Create FarmerRequest
+    try {
+      const request = await farmerRequestModel.create({
+        // Existing User reference
+        userId,
 
+        // Snapshot of User information
+        userInfo: {
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
+
+        // Farmer information
+        farmName: payload.farmName,
+        farmDescription: payload.farmDescription,
+
+        location: payload.location,
+
+        farmSize: payload.farmSize,
+
+        crops: payload.crops,
+
+        certifications: payload.certifications || [],
+
+        farmImages: payload.farmImages || [],
+
+        // New requests are always pending
+        status: "pending",
+      });
+
+      // 5. Populate User information
+      return await request.populate(
+        "userId",
+        "fullName email role",
+      );
+    } catch (error) {
+      // Handle race condition caused by unique userId
+      if (error.code === 11000) {
+        throw new ApiError(
+          409,
+          "You already have a farmer account request",
+        );
+      }
+
+      throw error;
+    }
+  },
+});
+//gets all farmer requests for a specific user, sorted by creation
+//  date in descending order, and populates the user details
+//  (full name, email, and role)for each request.
+// getMyFarmerRequests: async (userId) => {
+//   return farmerRequestModel
+//     .find({ userId })
+//     .sort({ createdAt: -1 })
+//     .populate("userId", "fullName email role");
+// },
+
+/*
   updateFarmerRequest: async (userId, payload) => {
     const request = await farmerRequestModel.findOne({
       userId,
@@ -158,14 +205,15 @@ export const createFarmerRequestService = ({
     return request;
   },
 });
+ */
 
 const farmerRequestService = createFarmerRequestService();
 
 export const createFarmerRequest = farmerRequestService.createFarmerRequest;
-export const getMyFarmerRequests = farmerRequestService.getMyFarmerRequests;
-export const updateFarmerRequest = farmerRequestService.updateFarmerRequest;
-export const deleteFarmerRequest = farmerRequestService.deleteFarmerRequest;
-export const getAllFarmerRequests = farmerRequestService.getAllFarmerRequests;
-export const getFarmerRequestById = farmerRequestService.getFarmerRequestById;
-export const approveFarmerRequest = farmerRequestService.approveFarmerRequest;
-export const rejectFarmerRequest = farmerRequestService.rejectFarmerRequest;
+// export const getMyFarmerRequests = farmerRequestService.getMyFarmerRequests;
+// export const updateFarmerRequest = farmerRequestService.updateFarmerRequest;
+// export const deleteFarmerRequest = farmerRequestService.deleteFarmerRequest;
+// export const getAllFarmerRequests = farmerRequestService.getAllFarmerRequests;
+// export const getFarmerRequestById = farmerRequestService.getFarmerRequestById;
+// export const approveFarmerRequest = farmerRequestService.approveFarmerRequest;
+// export const rejectFarmerRequest = farmerRequestService.rejectFarmerRequest;

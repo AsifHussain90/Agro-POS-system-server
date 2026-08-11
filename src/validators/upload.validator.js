@@ -6,15 +6,15 @@
  * by the profile image endpoint.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // ── Allowed MIME types ────────────────────────────────────────────────────────
 export const ALLOWED_IMAGE_MIME_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-  "image/gif",
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
 ];
 
 // Keep the old export name so the upload middleware doesn't break
@@ -25,7 +25,7 @@ export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 // ── Zod schema for upload options ─────────────────────────────────────────────
 export const uploadOptionsSchema = z.object({
-  folder: z.string().trim().min(1).max(100).optional().default("avatars"),
+  folder: z.string().trim().min(1).max(100).optional().default('avatars'),
   allowedTypes: z
     .array(z.string())
     .optional()
@@ -44,11 +44,11 @@ export const uploadOptionsSchema = z.object({
 export const validateImageFile = (file, options = {}) => {
   const { allowedTypes, maxSize } = uploadOptionsSchema.parse(options);
 
-  if (!file) throw new Error("No file provided.");
+  if (!file) throw new Error('No file provided.');
 
   if (!allowedTypes.includes(file.mimetype)) {
     throw new Error(
-      `Invalid file type: "${file.mimetype}". Accepted types: ${allowedTypes.join(", ")}.`,
+      `Invalid file type: "${file.mimetype}". Accepted types: ${allowedTypes.join(', ')}.`
     );
   }
 

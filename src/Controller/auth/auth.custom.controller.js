@@ -1,22 +1,22 @@
-import asyncHandler from "../../utils/asyncHandler.js";
-import ApiError from "../../utils/errorHandler.js";
-import ApiResponse from "../../utils/apiResponse.js";
-import { User } from "../../model/user.model.js";
+import asyncHandler from '../../utils/asyncHandler.js';
+import ApiError from '../../utils/errorHandler.js';
+import ApiResponse from '../../utils/apiResponse.js';
+import { User } from '../../model/user.model.js';
 import {
   generateAccessToken,
   generateRefreshToken,
   getRefreshTokenSecret,
-} from "../../utils/tokenGenerator.js";
-import jwt from "jsonwebtoken";
+} from '../../utils/tokenGenerator.js';
+import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
 };
 
 const setRefreshCookie = (res, refreshToken) => {
-  res.cookie("refreshToken", refreshToken, {
+  res.cookie('refreshToken', refreshToken, {
     ...cookieOptions,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
@@ -37,13 +37,13 @@ export const registerVisitor = asyncHandler(async (req, res) => {
   const existingUser = await User.findOne({ email: normalizedEmail });
 
   if (existingUser) {
-    throw new ApiError(409, "User already exists");
+    throw new ApiError(409, 'User already exists');
   }
 
   const user = await User.create({
     ...req.body,
     email: normalizedEmail,
-    role: "visitor",
+    role: 'visitor',
     mustChangePassword: false,
   });
 
@@ -62,29 +62,29 @@ export const registerVisitor = asyncHandler(async (req, res) => {
         },
         accessToken: tokens.accessToken,
       },
-      "User created",
-    ),
+      'User created'
+    )
   );
 });
 
 export const loginVisitor = asyncHandler(async (req, res) => {
   const user = await User.findOne({
     email: req.body.email.toLowerCase(),
-  }).select("+password");
+  }).select('+password');
 
   if (!user) {
-    throw new ApiError(401, "Invalid email or password");
+    throw new ApiError(401, 'Invalid email or password');
   }
 
   const isPasswordCorrect = await user.isPasswordCorrect(req.body.password);
   if (!isPasswordCorrect) {
-    throw new ApiError(401, "Invalid email or password");
+    throw new ApiError(401, 'Invalid email or password');
   }
 
   if (user.mustChangePassword) {
     return res.status(403).json({
       success: false,
-      message: "Password change required",
+      message: 'Password change required',
       data: {
         mustChangePassword: true,
         user: {
@@ -112,21 +112,21 @@ export const loginVisitor = asyncHandler(async (req, res) => {
         },
         accessToken: tokens.accessToken,
       },
-      "Login successful",
-    ),
+      'Login successful'
+    )
   );
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("+password");
+  const user = await User.findById(req.user._id).select('+password');
 
   if (!user) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, 'User not found');
   }
 
   const isValid = await user.isPasswordCorrect(req.body.currentPassword);
   if (!isValid) {
-    throw new ApiError(401, "Current password is incorrect");
+    throw new ApiError(401, 'Current password is incorrect');
   }
 
   user.password = req.body.newPassword;
@@ -135,5 +135,5 @@ export const changePassword = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Password changed successfully"));
+    .json(new ApiResponse(200, null, 'Password changed successfully'));
 });

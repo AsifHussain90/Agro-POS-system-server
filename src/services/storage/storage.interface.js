@@ -7,4 +7,4 @@
  * Import `cloudinaryService` wherever you need to upload, update, or delete images.
  */
 
-export { cloudinaryService } from "./cloudinary.service.js";
+export { cloudinaryService } from './cloudinary.service.js';

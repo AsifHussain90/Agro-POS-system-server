@@ -1,35 +1,35 @@
 // Generates access and refresh tokens for the user
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
 const getTokenSecret = (primaryName, legacyName) => {
   const secret = process.env[primaryName] || process.env[legacyName];
 
   if (secret) return secret;
 
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === 'production') {
     throw new Error(`Missing ${primaryName} environment variable`);
   }
 
-  return primaryName.includes("REFRESH")
-    ? "dev-refresh-secret"
-    : "dev-access-secret";
+  return primaryName.includes('REFRESH')
+    ? 'dev-refresh-secret'
+    : 'dev-access-secret';
 };
 
 export const getAccessTokenSecret = () =>
-  getTokenSecret("ACCESS_TOKEN_SECRET", "SECRET_ACCESS_TOKEN");
+  getTokenSecret('ACCESS_TOKEN_SECRET', 'SECRET_ACCESS_TOKEN');
 
 export const getRefreshTokenSecret = () =>
-  getTokenSecret("REFRESH_TOKEN_SECRET", "SECRET_REFRESH_TOKEN");
+  getTokenSecret('REFRESH_TOKEN_SECRET', 'SECRET_REFRESH_TOKEN');
 
 const getAccessTokenExpiry = () =>
   process.env.ACCESS_TOKEN_EXPIRY ||
   process.env.SECRET_ACCESS_TOKEN_EXPIRY ||
-  "15m";
+  '15m';
 
 const getRefreshTokenExpiry = () =>
   process.env.REFRESH_TOKEN_EXPIRY ||
   process.env.SECRET_REFRESH_TOKEN_EXPIRY ||
-  "7d";
+  '7d';
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -40,16 +40,14 @@ const generateAccessToken = (user) => {
       role: user.role,
     },
     getAccessTokenSecret(),
-    { expiresIn: getAccessTokenExpiry() },
+    { expiresIn: getAccessTokenExpiry() }
   );
 };
 
 const generateRefreshToken = (user) => {
-  return jwt.sign(
-    { _id: user._id },
-    getRefreshTokenSecret(),
-    { expiresIn: getRefreshTokenExpiry() },
-  );
+  return jwt.sign({ _id: user._id }, getRefreshTokenSecret(), {
+    expiresIn: getRefreshTokenExpiry(),
+  });
 };
 
 export { generateAccessToken, generateRefreshToken };

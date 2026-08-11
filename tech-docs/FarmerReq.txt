@@ -1,0 +1,46 @@
+Request flow
+
+POST /api/farmer-requests
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│      isUser      │
+└────────┬─────────┘
+         │
+         │ role === "user"
+         ▼
+┌──────────────────┐
+│     validate     │
+│      Zod         │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find User                │
+│ Check existing request   │
+│ Create FarmerRequest     │
+│ status = pending         │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      FarmerRequest

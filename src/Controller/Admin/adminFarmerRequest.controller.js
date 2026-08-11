@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
 
-import FarmerRequest from '../models/farmerRequest.model.js';
-import User from '../models/user.model.js';
+import { FarmerRequest } from '../models/farmerRequest.model.js';
+import { Farmer } from '../models/farmer.model.js';
+import { User } from '../models/user.model.js';
+import ApiError from '../utils/errorHandler.js';
 
-
-// ======================================================
 // GET ALL FARMER REQUESTS
 // GET /api/admin/farmer-requests
 // ======================================================
@@ -13,6 +13,7 @@ export const getAllFarmerRequests = async (req, res) => {
   try {
     const requests = await FarmerRequest.find()
       .populate('userId', 'fullName email role avatar')
+      .populate('reviewedBy', 'fullName email')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -29,7 +30,6 @@ export const getAllFarmerRequests = async (req, res) => {
     });
   }
 };
-
 
 // ======================================================
 // GET SINGLE FARMER REQUEST
@@ -48,7 +48,8 @@ export const getFarmerRequestById = async (req, res) => {
     }
 
     const farmerRequest = await FarmerRequest.findById(id)
-      .populate('userId', 'fullName email role avatar');
+      .populate('userId', 'fullName email role avatar')
+      .populate('reviewedBy', 'fullName email');
 
     if (!farmerRequest) {
       return res.status(404).json({
@@ -72,15 +73,20 @@ export const getFarmerRequestById = async (req, res) => {
   }
 };
 
-
 // ======================================================
 // APPROVE FARMER REQUEST
 // PATCH /api/admin/farmer-requests/:id/approve
 // ======================================================
 
 export const approveFarmerRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
     const { id } = req.params;
+
+    // --------------------------------------------------
+    // Validate request ID
+    // --------------------------------------------------
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -89,91 +95,186 @@ export const approveFarmerRequest = async (req, res) => {
       });
     }
 
-    const farmerRequest = await FarmerRequest.findById(id);
+    let result;
 
-    if (!farmerRequest) {
-      return res.status(404).json({
-        success: false,
-        message: 'Farmer request not found',
+    // --------------------------------------------------
+    // Start transaction
+    // --------------------------------------------------
+
+    await session.withTransaction(async () => {
+      // ------------------------------------------------
+      // Find farmer request
+      // ------------------------------------------------
+
+      const farmerRequest = await FarmerRequest.findById(id).session(session);
+
+      if (!farmerRequest) {
+        throw new ApiError(404, 'Farmer request not found');
+      }
+
+      // ------------------------------------------------
+      // Request must still be pending
+      // ------------------------------------------------
+
+      if (farmerRequest.status !== 'pending') {
+        throw new ApiError(
+          400,
+          `Farmer request is already ${farmerRequest.status}`
+        );
+      }
+
+      // ------------------------------------------------
+      // Find user
+      // ------------------------------------------------
+
+      const user = await User.findById(farmerRequest.userId).session(session);
+
+      if (!user) {
+        throw new ApiError(404, 'User associated with this request not found');
+      }
+
+      // ------------------------------------------------
+      // User must still be a normal user
+      // ------------------------------------------------
+
+      if (user.role !== 'user') {
+        throw new ApiError(400, `User already has role "${user.role}"`);
+      }
+
+      // ------------------------------------------------
+      // Make sure Farmer profile doesn't already exist
+      // ------------------------------------------------
+
+      const existingFarmer = await Farmer.findOne({
+        userId: user._id,
+      }).session(session);
+
+      if (existingFarmer) {
+        throw new ApiError(409, 'Farmer profile already exists for this user');
+      }
+
+      // ------------------------------------------------
+      // 1. Create Farmer profile
+      // ------------------------------------------------
+
+      const farmer = new Farmer({
+        userId: user._id,
+
+        farmName: farmerRequest.farmName,
+
+        farmDescription: farmerRequest.farmDescription,
+
+        location: farmerRequest.location,
+
+        farmSize: farmerRequest.farmSize,
+
+        crops: farmerRequest.crops,
+
+        farmImages: farmerRequest.farmImages,
+
+        isActive: true,
+
+        approvedAt: new Date(),
       });
-    }
 
-    // Request must still be pending
-    if (farmerRequest.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: `Farmer request is already ${farmerRequest.status}`,
-      });
-    }
+      await farmer.save({ session });
 
-    const user = await User.findById(farmerRequest.userId);
+      // ------------------------------------------------
+      // 2. Promote User to farmer
+      // ------------------------------------------------
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User associated with this request not found',
-      });
-    }
+      user.role = 'farmer';
 
-    // User should still be a normal user
-    if (user.role !== 'user') {
-      return res.status(400).json({
-        success: false,
-        message: `User already has role "${user.role}"`,
-      });
-    }
+      await user.save({ session });
 
-    // ---------------------------------------------
-    // Approve request
-    // ---------------------------------------------
+      // ------------------------------------------------
+      // 3. Mark FarmerRequest as approved
+      // ------------------------------------------------
 
-    farmerRequest.status = 'approved';
-    farmerRequest.reviewedBy = req.user._id;
-    farmerRequest.reviewedAt = new Date();
+      farmerRequest.status = 'approved';
 
-    // ---------------------------------------------
-    // Promote user to farmer
-    // ---------------------------------------------
+      farmerRequest.reviewedBy = req.user._id;
 
-    user.role = 'farmer';
+      farmerRequest.reviewedAt = new Date();
 
-    await farmerRequest.save();
-    await user.save();
+      await farmerRequest.save({ session });
 
+      // ------------------------------------------------
+      // Store result for response
+      // ------------------------------------------------
+
+      result = {
+        farmer,
+        farmerRequest,
+        user,
+      };
+    });
+
+    // --------------------------------------------------
+    // Populate after transaction
+    // --------------------------------------------------
+
+    await result.farmer.populate('userId', 'fullName email role avatar');
+
+    await result.farmerRequest.populate('reviewedBy', 'fullName email');
+
+    // Success response
     return res.status(200).json({
       success: true,
       message: 'Farmer request approved successfully',
       data: {
-        farmerRequest,
+        farmer: result.farmer,
+
+        farmerRequest: result.farmerRequest,
+
         user: {
-          _id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
+          _id: result.user._id,
+          fullName: result.user.fullName,
+          email: result.user.email,
+          role: result.user.role,
         },
       },
     });
   } catch (error) {
     console.error('Approve farmer request error:', error);
 
+    // Handle our ApiError
+    if (error instanceof ApiError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    // MongoDB duplicate key
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Farmer profile already exists for this user',
+      });
+    }
+    // Unknown error
     return res.status(500).json({
       success: false,
       message: 'Failed to approve farmer request',
     });
+  } finally {
+    await session.endSession();
   }
 };
 
-
-// ======================================================
 // REJECT FARMER REQUEST
 // PATCH /api/admin/farmer-requests/:id/reject
-// ======================================================
-
+// ====================================================
 export const rejectFarmerRequest = async (req, res) => {
   try {
     const { id } = req.params;
 
     const { reviewMessage } = req.body;
+
+    // --------------------------------------------------
+    // Validate ID
+    // --------------------------------------------------
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -181,6 +282,10 @@ export const rejectFarmerRequest = async (req, res) => {
         message: 'Invalid farmer request ID',
       });
     }
+
+    // --------------------------------------------------
+    // Find request
+    // --------------------------------------------------
 
     const farmerRequest = await FarmerRequest.findById(id);
 
@@ -191,6 +296,10 @@ export const rejectFarmerRequest = async (req, res) => {
       });
     }
 
+    // --------------------------------------------------
+    // Only pending requests can be rejected
+    // --------------------------------------------------
+
     if (farmerRequest.status !== 'pending') {
       return res.status(400).json({
         success: false,
@@ -198,12 +307,21 @@ export const rejectFarmerRequest = async (req, res) => {
       });
     }
 
+    // --------------------------------------------------
+    // Reject request
+    // --------------------------------------------------
+
     farmerRequest.status = 'rejected';
     farmerRequest.reviewedBy = req.user._id;
     farmerRequest.reviewedAt = new Date();
     farmerRequest.reviewMessage = reviewMessage || null;
-
     await farmerRequest.save();
+
+    await farmerRequest.populate('reviewedBy', 'fullName email');
+
+    // --------------------------------------------------
+    // Response
+    // --------------------------------------------------
 
     return res.status(200).json({
       success: true,

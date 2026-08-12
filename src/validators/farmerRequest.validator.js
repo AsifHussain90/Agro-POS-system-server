@@ -19,7 +19,7 @@ const locationSchema = z
 const farmSizeSchema = z
   .object({
     value: z.number().positive(),
-    unit: z.enum(['acres', 'hectares']),
+    unit: z.enum(['acres', 'hectares','sqft']),
   })
   .strict();
 

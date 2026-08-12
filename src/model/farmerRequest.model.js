@@ -63,7 +63,7 @@ const farmSizeSchema = new Schema(
     unit: {
       type: String,
       required: [true, 'Farm size unit is required'],
-      enum: ['acres', 'hectares'],
+      enum: ['acres', 'hectares','sqft'],
     },
   },
   { _id: false }

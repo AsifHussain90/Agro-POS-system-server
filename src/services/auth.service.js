@@ -14,11 +14,12 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from '../utils/tokenGenerator.js';
+
 //toSafeUser function is defined here,which takes a user object and returns a safe version
-//  of the user object without sensitive information like password and refresh token.
-//  It also includes the user's avatar information if available.
+// of the user object without sensitive information like password and refresh token.
+// It also includes the user's avatar information if available.
 export const toSafeUser = (user) => ({
-  id: user._id,
+  _id: user._id,  // ✅ FIXED: was `id`
   fullName: user.fullName,
   email: user.email,
   role: user.role,
@@ -29,7 +30,7 @@ export const toSafeUser = (user) => ({
 
 //issueTokens function is defined here, which takes a user object and generates access
 // and refresh tokens for the user then saved to the database and returned
-//  along with a safe version of the user object.
+// along with a safe version of the user object.
 const issueTokens = async (
   user,
   { accessTokenGenerator, refreshTokenGenerator }
@@ -45,9 +46,10 @@ const issueTokens = async (
     refreshToken,
   };
 };
+
 //createAuthService function is defined here, which takes optional
-//  dependencies for the user model and token generators and returns
-//  an object with register and login methods.
+// dependencies for the user model and token generators and returns
+// an object with register and login methods.
 export const createAuthService = ({
   UserModel = User,
   accessTokenGenerator = generateAccessToken,

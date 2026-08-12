@@ -1,9 +1,6 @@
 import express from 'express';
 
-import {
-  getMyFarmerProfile,
-  updateMyFarmerProfile,
-} from '../controllers/farmer.controller.js';
+import {getMyFarmerProfile,updateMyFarmerProfile} from "../Controller/farmer/farmer.controller.js";
 
 import { verifyJWT, isFarmer } from '../middlewares/auth.middleware.js';
 

@@ -1,90 +1,88 @@
+import asyncHandler from '../../utils/asyncHandler.js';
+import ApiResponse from '../../utils/apiResponse.js';
+import {
+  createFarmerRequest,
+  getMyFarmerRequests,
+  updateFarmerRequest,
+  deleteFarmerRequest,
+  getAllFarmerRequests,
+  getFarmerRequestById,
+  approveFarmerRequest,
+  rejectFarmerRequest,
+} from '../../services/farmerRequest.service.js';
 
-import asyncHandler from "../../utils/asyncHandler.js";
-import ApiResponse from "../../utils/apiResponse.js";
-import { createFarmerRequestService } from "../../services/farmerRequest.service.js";
+// POST /api/farmer-request
+export const createFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await createFarmerRequest(req.user._id, req.body);
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, request, 'Farmer account request submitted successfully')
+    );
+});
 
-const farmerRequestService = createFarmerRequestService();
+// GET /api/farmer-request/my
+export const getMyFarmerRequestsController = asyncHandler(async (req, res) => {
+  const requests = await getMyFarmerRequests(req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
+});
 
-export const createFarmerRequestController = asyncHandler(
-  async (req, res) => {
-    const request =
-      await farmerRequestService.createFarmerRequest(
-        req.user._id,
-        req.body,
-      );
+// PUT /api/farmer-request/:id
+export const updateFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await updateFarmerRequest(
+    req.user._id,
+    req.params.id,
+    req.body
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request updated'));
+});
 
-    return res.json(
-        new ApiResponse(
-          201,
-          request,
-          "Farmer account request submitted successfully",
-        ),
-      );
-  },
-);
+// DELETE /api/farmer-request/:id
+export const deleteFarmerRequestController = asyncHandler(async (req, res) => {
+  const result = await deleteFarmerRequest(req.user._id, req.params.id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, 'Farmer request deleted'));
+});
 
-// export const getMyFarmerRequestsController = asyncHandler(async (req, res) => {
-//   const requests = await farmerRequestService.getMyFarmerRequests(req.user._id);
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, requests, "Farmer requests retrieved"));
-// });
+// GET /api/farmer-request (admin)
+export const getAllFarmerRequestsController = asyncHandler(async (req, res) => {
+  const requests = await getAllFarmerRequests();
+  return res
+    .status(200)
+    .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
+});
 
-// export const updateFarmerRequestController = asyncHandler(async (req, res) => {
-//   const request = await farmerRequestService.updateFarmerRequest(
-//     req.user._id,
-//     req.body,
-//   );
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, request, "Farmer request updated"));
-// });
+// GET /api/farmer-request/:id (admin)
+export const getFarmerRequestByIdController = asyncHandler(async (req, res) => {
+  const request = await getFarmerRequestById(req.params.id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request retrieved'));
+});
 
-// export const deleteFarmerRequestController = asyncHandler(async (req, res) => {
-//   const result = await farmerRequestService.deleteFarmerRequest(req.user._id);
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, result, "Farmer request deleted"));
-// });
+// PATCH /api/farmer-request/:id/approve (admin)
+export const approveFarmerRequestController = asyncHandler(async (req, res) => {
+  const result = await approveFarmerRequest(req.params.id, {
+    reviewedBy: req.user._id,
+    reviewMessage: req.body.reviewMessage,
+  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, 'Farmer request approved'));
+});
 
-// export const getAllFarmerRequestsController = asyncHandler(async (req, res) => {
-//   const requests = await farmerRequestService.getAllFarmerRequests();
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, requests, "Farmer requests retrieved"));
-// });
-
-// export const getFarmerRequestByIdController = asyncHandler(async (req, res) => {
-//   const request = await farmerRequestService.getFarmerRequestById(
-//     req.params.id,
-//   );
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, request, "Farmer request retrieved"));
-// });
-
-// export const approveFarmerRequestController = asyncHandler(async (req, res) => {
-//   const result = await farmerRequestService.approveFarmerRequest(
-//     req.params.id,
-//     {
-//       reviewedBy: req.user._id,
-//       reviewMessage: req.body.reviewMessage,
-//     },
-//   );
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, result, "Farmer request approved"));
-// });
-
-// export const rejectFarmerRequestController = asyncHandler(async (req, res) => {
-//   const request = await farmerRequestService.rejectFarmerRequest(
-//     req.params.id,
-//     {
-//       reviewedBy: req.user._id,
-//       reviewMessage: req.body.reviewMessage,
-//     },
-//   );
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, request, "Farmer request rejected"));
-// });
+// PATCH /api/farmer-request/:id/reject (admin)
+export const rejectFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await rejectFarmerRequest(req.params.id, {
+    reviewedBy: req.user._id,
+    reviewMessage: req.body.reviewMessage,
+  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request rejected'));
+});

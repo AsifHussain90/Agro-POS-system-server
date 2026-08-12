@@ -1,0 +1,10 @@
+| Method   | Route                             | Access | Description                     |
+| -------- | --------------------------------- | ------ | ------------------------------- |
+| `POST`   | `/api/farmer-request`             | User   | Submit request                  |
+| `GET`    | `/api/farmer-request/my`          | User   | View my request                 |
+| `PUT`    | `/api/farmer-request/:id`         | User   | Update pending request          |
+| `DELETE` | `/api/farmer-request/:id`         | User   | Delete pending request          |
+| `GET`    | `/api/farmer-request`             | Admin  | List all requests               |
+| `GET`    | `/api/farmer-request/:id`         | Admin  | Get single request              |
+| `PATCH`  | `/api/farmer-request/:id/approve` | Admin  | Approve + create Farmer profile |
+| `PATCH`  | `/api/farmer-request/:id/reject`  | Admin  | Reject request                  |

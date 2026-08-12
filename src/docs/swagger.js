@@ -191,7 +191,7 @@ export const swaggerDocument = {
 
       FarmerAddress: {
         type: 'object',
-        required: ['city'],
+        required: ['city', 'country'], // ✅ FIXED: aligned with practical requirements
         properties: {
           street: {
             type: 'string',
@@ -208,7 +208,7 @@ export const swaggerDocument = {
           },
           zipCode: {
             type: 'string',
-            nullable: true,
+            nullable: false,
             example: '54000',
           },
         },
@@ -1322,7 +1322,5 @@ export const swaggerDocument = {
         },
       },
     },
-
-    
   },
 };

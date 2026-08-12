@@ -13,20 +13,29 @@ import {
 
 const router = express.Router();
 
-// Changed name to localAuthLimiter
-const localAuthLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+// ── Strict limiter for account creation ──────────────────────────────────────
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, //  5 registrations per 15 min — prevents spam
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
-  message: { message: 'Too many requests, please try again later.' },
+  message: { message: 'Too many registration attempts, please try again later.' },
 });
 
-// Update the middleware usage below
-router.post('/register', localAuthLimiter, validate(registerSchema), register);
-router.post('/signup', localAuthLimiter, validate(registerSchema), register);
-router.post('/login', localAuthLimiter, validate(loginSchema), login);
+// ── Moderate limiter for login ─────────────────────────────────────────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, //  20 attempts per 15 min — allows failed passwords
+  skip: () => process.env.NODE_ENV === 'test',
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many login attempts, please try again later.' },
+});
+
+router.post('/register', registerLimiter, validate(registerSchema), register);
+router.post('/signup', registerLimiter, validate(registerSchema), register);
+router.post('/login', loginLimiter, validate(loginSchema), login);
 router.get('/profile', verifyJWT, profile);
 router.post('/logout', logout);
 router.post('/refresh-token', refreshAccessToken);

@@ -2,10 +2,10 @@ import { z } from 'zod';
 
 const addressSchema = z
   .object({
-    street: z.string().trim().min(1).max(150),
+    street: z.string().trim().max(150).optional().nullable(),  //  FIXED: optional
     city: z.string().trim().min(1).max(100),
     country: z.string().trim().min(1).max(100),
-    zipCode: z.string().trim().min(1).max(20),
+    zipCode: z.string().trim().max(20)
   })
   .strict();
 
@@ -19,7 +19,7 @@ const locationSchema = z
 const farmSizeSchema = z
   .object({
     value: z.number().positive(),
-    unit: z.enum(['acres', 'hectares','sqft']),
+    unit: z.enum(['acres', 'hectares', 'sqft']),
   })
   .strict();
 
@@ -50,7 +50,6 @@ export const createFarmerRequestSchema = z
     farmSize: farmSizeSchema,
 
     crops: z.array(cropSchema).min(1, 'At least one crop is required'),
-
 
     farmImages: z.array(farmImageSchema).optional().default([]),
   })

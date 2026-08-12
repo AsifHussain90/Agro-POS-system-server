@@ -8,19 +8,19 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { errorHandler } from './src/middlewares/error.middleware.js';
 import { setupSwagger } from './src/docs/swagger.setup.js';
-import farmerRoutes from './src/routes/farmer.route.js'
+import farmerRoutes from './src/routes/farmer.route.js';
 
 const app = express();
 
 dotenv.config();
 
-app.use(express.json({limit: '10mb'}));
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 const corsOptions = {
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5000'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],  // ✅ FIXED: was 'PATCh'
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };

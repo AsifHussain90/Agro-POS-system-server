@@ -6,7 +6,6 @@ const addressSchema = new Schema(
   {
     street: {
       type: String,
-      required: [true, 'Street is required'],
       trim: true,
       maxlength: [150, 'Street cannot exceed 150 characters'],
     },

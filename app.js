@@ -2,6 +2,7 @@ import express from 'express';
 import { authRoutes } from './src/routes/auth.routes.js';
 import { uploadRoutes } from './src/routes/upload.routes.js';
 import { farmerRequestRoutes } from './src/routes/farmerRequest.routes.js';
+import { productRoutes } from './src/routes/product.routes.js';  
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -20,12 +21,11 @@ app.use(cookieParser());
 
 const corsOptions = {
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5000'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],  // ✅ FIXED: was 'PATCh'
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 
-// CSP relaxed enough for Swagger UI (inline scripts/styles)
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -52,6 +52,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/farmer-request', farmerRequestRoutes);
 app.use('/api/farmer', farmerRoutes);
+app.use('/api/products', productRoutes);  
 
 app.use(errorHandler);
 

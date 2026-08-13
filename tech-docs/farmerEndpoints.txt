@@ -1,0 +1,525 @@
+| Method   | Route                             | Access | Description                     |
+| -------- | --------------------------------- | ------ | ------------------------------- |
+| `POST`   | `/api/farmer-request`             | User   | Submit request                  |
+| `GET`    | `/api/farmer-request/my`          | User   | View my request                 |
+| `PUT`    | `/api/farmer-request/:id`         | User   | Update pending request          |
+| `DELETE` | `/api/farmer-request/:id`         | User   | Delete pending request          |
+| `GET`    | `/api/farmer-request`             | Admin  | List all requests               |
+| `GET`    | `/api/farmer-request/:id`         | Admin  | Get single request              |
+| `PATCH`  | `/api/farmer-request/:id/approve` | Admin  | Approve + create Farmer profile |
+| `PATCH`  | `/api/farmer-request/:id/reject`  | Admin  | Reject request                  |
+
+
+1. POST /api/farmer-request — Submit request
+POST /api/farmer-request
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│      isUser      │
+└────────┬─────────┘
+         │
+         │ role === "user"
+         ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find User                │
+│ Check existing request   │
+│ Create FarmerRequest     │
+│ status = pending         │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      FarmerRequest
+What happens?
+
+The user sends their farmer application.
+
+The service should:
+
+Identify the logged-in user from req.user._id.
+Check that the user exists.
+Check whether they already have an active/pending request.
+Create the request.
+Set status = "pending".
+2. GET /api/farmer-request/my — View my request
+
+Access: User
+
+GET /api/farmer-request/my
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│      isUser      │
+└────────┬─────────┘
+         │
+         │ role === "user"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.user._id     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find request             │
+│ WHERE userId =           │
+│ req.user._id             │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      My FarmerRequest
+
+The user does not send their userId.
+
+The backend gets it from:
+
+req.user._id
+
+This prevents a user from asking:
+
+/my?userId=someone-else
+
+and seeing another user's request.
+
+3. PUT /api/farmer-request/:id — Update pending request
+
+Access: User
+
+This requires both ownership and status checking.
+
+PUT /api/farmer-request/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│      isUser      │
+└────────┬─────────┘
+         │
+         │ role === "user"
+         ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.params.id            │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find request             │
+│ Check ownership          │
+│ Check status             │
+│ status === pending?      │
+│ Update request            │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+    Updated FarmerRequest
+
+The service checks:
+
+request.userId === req.user._id
+
+AND:
+
+request.status === "pending"
+
+So:
+
+Owner + Pending
+       │
+       ├── YES → Update
+       │
+       └── NO  → Reject
+
+If the request is already approved or rejected, the user should not be able to modify it.
+
+4. DELETE /api/farmer-request/:id — Delete pending request
+
+Access: User
+
+Same idea as update.
+
+DELETE /api/farmer-request/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│      isUser      │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.user._id     │
+│ req.params.id    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find request             │
+│ Check ownership          │
+│ Check status             │
+│ status === pending?      │
+│ Delete request           │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+    FarmerRequest Deleted
+
+Again:
+
+Is owner?
+    │
+    ▼
+Is status pending?
+    │
+    ▼
+Delete
+5. GET /api/farmer-request — Admin list all requests
+
+Access: Admin
+
+Now the flow changes because this is an admin operation.
+
+GET /api/farmer-request
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│     isAdmin      │
+└────────┬─────────┘
+         │
+         │ role === "admin"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.query        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Get all requests         │
+│ Filter by status         │
+│ Search                   │
+│ Pagination               │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+   FarmerRequest List
+
+For example, the admin could request:
+
+GET /api/farmer-request?status=pending&page=1&limit=10
+
+The service returns pending farmer applications.
+
+6. GET /api/farmer-request/:id — Admin gets one request
+
+Access: Admin
+
+GET /api/farmer-request/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│     isAdmin      │
+└────────┬─────────┘
+         │
+         │ role === "admin"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.params.id    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find FarmerRequest       │
+│ Populate User data       │
+│ Check request exists     │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      FarmerRequest
+
+Unlike the user endpoints, the admin can access any request.
+
+7. PATCH /api/farmer-request/:id/approve — Approve request
+
+This is the most important flow because approval creates the Farmer profile.
+
+PATCH /api/farmer-request/:id/approve
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│     isAdmin      │
+└────────┬─────────┘
+         │
+         │ role === "admin"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.params.id    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────┐
+│           Service            │
+│                              │
+│ Find FarmerRequest            │
+│ Check request exists          │
+│ Check status = pending        │
+│                              │
+│ Create Farmer Profile        │
+│                              │
+│ Update request                │
+│ status = approved             │
+└──────────────┬───────────────┘
+               │
+               ▼
+          MongoDB
+          /      \
+         ▼        ▼
+ FarmerRequest   Farmer
+    approved     created
+
+The important business logic is:
+
+Find Request
+     │
+     ▼
+Is status "pending"?
+     │
+   YES
+     │
+     ▼
+Create Farmer Profile
+     │
+     ▼
+Update Request
+status = "approved"
+
+So approval effectively changes the user's account from:
+
+User
+ │
+ │ farmer request
+ ▼
+FarmerRequest
+ │
+ │ admin approves
+ ▼
+Farmer Profile
+
+Ideally, this should be handled as an atomic/transactional operation, so you don't end up with an approved request but no Farmer profile if something fails midway.
+
+8. PATCH /api/farmer-request/:id/reject — Reject request
+
+Access: Admin
+
+PATCH /api/farmer-request/:id/reject
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│     isAdmin      │
+└────────┬─────────┘
+         │
+         │ role === "admin"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.params.id    │
+│ req.body         │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find FarmerRequest       │
+│ Check status = pending   │
+│ Update status            │
+│ status = rejected        │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+    FarmerRequest
+       rejected
+
+If you want to store a rejection reason, the request could contain:
+
+{
+  "reason": "Required documents are missing"
+}
+
+Then the service can save:
+
+status = rejected
+rejectionReason = "Required documents are missing"
+Complete Farmer Request Data Flow
+                         FARMER REQUEST API
+                                  │
+              ┌───────────────────┴───────────────────┐
+              │                                       │
+            USER                                    ADMIN
+              │                                       │
+       ┌──────┼──────┐                     ┌──────────┼──────────┐
+       │      │      │                     │          │          │
+      POST    GET    PUT/DELETE            GET        GET       PATCH
+       │      │      │                     │          │       approve/reject
+       │      │      │                     │          │          │
+       ▼      ▼      ▼                     ▼          ▼          ▼
+    verifyJWT → isUser                 verifyJWT → isAdmin
+       │                                  │
+       ▼                                  ▼
+      Zod                               Controller
+       │                                  │
+       ▼                                  ▼
+  Controller                            Service
+       │                                  │
+       ▼                                  ▼
+   Service                             MongoDB
+       │
+       ▼
+    MongoDB
+The core rules
+Endpoint	Who	Important check
+POST /farmer-request	User	Don't already have a pending request
+GET /farmer-request/my	User	Use req.user._id
+PUT /farmer-request/:id	User	Ownership + pending status
+DELETE /farmer-request/:id	User	Ownership + pending status
+GET /farmer-request	Admin	Admin role
+GET /farmer-request/:id	Admin	Admin role
+PATCH /farmer-request/:id/approve	Admin	Pending → create Farmer → approved
+PATCH /farmer-request/:id/reject	Admin	Pending → rejected
+
+The overall lifecycle is:
+
+                  User
+                   │
+                   │ POST
+                   ▼
+            ┌──────────────┐
+            │    pending   │
+            └──────┬───────┘
+                   │
+             ┌─────┴─────┐
+             │           │
+          Approve      Reject
+             │           │
+             ▼           ▼
+        ┌─────────┐  ┌──────────┐
+        │ approved│  │ rejected │
+        └────┬────┘  └──────────┘
+             │
+             ▼
+      Create Farmer Profile

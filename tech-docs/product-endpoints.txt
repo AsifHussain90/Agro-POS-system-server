@@ -1,0 +1,284 @@
+| Method   | Route                       | Access | Description                                |
+| -------- | --------------------------- | ------ | ------------------------------------------ |
+| `GET`    | `/api/products`             | Public | Browse products (search, filter, paginate) |
+| `GET`    | `/api/products/:id`         | Public | Get single product                         |
+| `POST`   | `/api/products`             | Farmer | Create product                             |
+| `GET`    | `/api/products/my-products` | Farmer | List my products                           |
+| `PUT`    | `/api/products/:id`         | Farmer | Update my product                          |
+| `DELETE` | `/api/products/:id`         | Farmer | Delete my product                          |
+
+
+
+Overall Structure:
+
+                  Product Request Flow — Create Product
+POST /api/products
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│    isFarmer      │
+└────────┬─────────┘
+         │
+         │ role === "farmer"
+         ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Validate farmer          │
+│ Prepare product data     │
+│ Set farmerId             │
+│ Create Product           │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+          Product
+GET /api/products — Public browse
+GET /api/products
+        │
+        │ Query params
+        │ ?search=apple
+        │ &category=fruit
+        │ &page=1
+        │ &limit=10
+        ▼
+┌──────────────────┐
+│     validate     │
+│   Query / Zod    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.query                │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Build search filter      │
+│ Apply category filter    │
+│ Apply pagination         │
+│ Find products            │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      Product List
+GET /api/products/:id — Single product
+GET /api/products/:id
+        │
+        │ /123
+        ▼
+┌──────────────────┐
+│     validate     │
+│    Product ID    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.params.id    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find Product by ID       │
+│ Check product exists     │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+          Product
+GET /api/products/my-products — Farmer's products
+GET /api/products/my-products
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│    isFarmer      │
+└────────┬─────────┘
+         │
+         │ role === "farmer"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.user._id     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Get farmer ID            │
+│ Find products            │
+│ WHERE farmerId = user._id│
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+    Farmer's Products
+PUT /api/products/:id — Update product
+
+This one needs an ownership check:
+
+PUT /api/products/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│    isFarmer      │
+└────────┬─────────┘
+         │
+         │ role === "farmer"
+         ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.params.id            │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find Product             │
+│ Check farmerId           │
+│ Check ownership          │
+│ Update Product           │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      Updated Product
+
+The important check is:
+
+product.farmerId === req.user._id
+
+If yes → update.
+
+If no → 403 Forbidden.
+
+DELETE /api/products/:id — Delete product
+DELETE /api/products/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│    isFarmer      │
+└────────┬─────────┘
+         │
+         │ role === "farmer"
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.params.id            │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find Product             │
+│ Check ownership          │
+│ Delete Product           │
+└────────────┬─────────────┘
+             │
+             ▼
+       MongoDB
+             │
+             ▼
+      Product Deleted
+Overall architecture
+                    PRODUCT API
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+      PUBLIC           FARMER           FARMER
+        │                │                │
+        ▼                ▼                ▼
+   GET products      POST products    GET my-products
+        │                │
+        ▼                ▼
+    Controller       verifyJWT
+        │                │
+        ▼                ▼
+     Service         isFarmer
+        │                │
+        ▼                ▼
+     MongoDB          Zod
+                         │
+                         ▼
+                    Controller
+                         │
+                         ▼
+                      Service
+                         │
+                         ▼
+                      MongoDB

@@ -604,7 +604,172 @@ export const swaggerDocument = {
           },
         },
       },
+      ProductCreateInput: {
+        type: 'object',
+        required: ['name', 'price', 'quantity', 'category'],
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 3,
+            maxLength: 150,
+            example: 'Organic Tomatoes',
+          },
+          description: {
+            type: 'string',
+            maxLength: 2000,
+            nullable: true,
+            example: 'Fresh organic tomatoes from Green Valley Farm',
+          },
+          price: {
+            type: 'number',
+            minimum: 0,
+            example: 150.5,
+          },
+          quantity: {
+            type: 'integer',
+            minimum: 0,
+            example: 100,
+          },
+          category: {
+            type: 'string',
+            maxLength: 100,
+            example: 'vegetables',
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'uri',
+            },
+            example: ['https://example.com/tomato.jpg'],
+          },
+        },
+      },
 
+      ProductUpdateInput: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 3,
+            maxLength: 150,
+          },
+          description: {
+            type: 'string',
+            maxLength: 2000,
+            nullable: true,
+          },
+          price: {
+            type: 'number',
+            minimum: 0,
+          },
+          quantity: {
+            type: 'integer',
+            minimum: 0,
+          },
+          category: {
+            type: 'string',
+            maxLength: 100,
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'uri',
+            },
+          },
+        },
+      },
+
+      ProductResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '64a1b2c3d4e5f6a7b8c9d0e3',
+          },
+          farmer: {
+            type: 'object',
+            properties: {
+              _id: {
+                type: 'string',
+              },
+              farmName: {
+                type: 'string',
+                example: 'Green Valley Farm',
+              },
+              userId: {
+                type: 'string',
+              },
+            },
+          },
+          name: {
+            type: 'string',
+            example: 'Organic Tomatoes',
+          },
+          description: {
+            type: 'string',
+            nullable: true,
+            example: 'Fresh organic tomatoes',
+          },
+          price: {
+            type: 'number',
+            example: 150.5,
+          },
+          quantity: {
+            type: 'integer',
+            example: 100,
+          },
+          category: {
+            type: 'string',
+            example: 'vegetables',
+          },
+          images: {
+            type: 'array',
+            items: {
+              type: 'string',
+              format: 'uri',
+            },
+            example: ['https://example.com/tomato.jpg'],
+          },
+          isActive: {
+            type: 'boolean',
+            example: true,
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+      },
+
+      ProductListResponse: {
+        type: 'object',
+        properties: {
+          products: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/ProductResponse',
+            },
+          },
+          total: {
+            type: 'integer',
+            example: 50,
+          },
+          page: {
+            type: 'integer',
+            example: 1,
+          },
+          limit: {
+            type: 'integer',
+            example: 10,
+          },
+        },
+      },
       UpdateProductRequest: {
         type: 'object',
         properties: {
@@ -1465,11 +1630,7 @@ export const swaggerDocument = {
             description: 'Farmer request deleted',
             content: {
               'application/json': {
-                schema: successEnvelope(
-                  200,
-                  'Farmer request deleted',
-                  null
-                ),
+                schema: successEnvelope(200, 'Farmer request deleted', null),
               },
             },
           },
@@ -1565,5 +1726,220 @@ export const swaggerDocument = {
         },
       },
     },
+
+    '/api/products': {
+  get: {
+    tags: ['Products'],
+    summary: 'Get all products',
+    parameters: [
+      {
+        name: 'search',
+        in: 'query',
+        schema: { type: 'string' },
+        description: 'Text search across name, description, and category',
+      },
+      {
+        name: 'category',
+        in: 'query',
+        schema: { type: 'string' },
+      },
+      {
+        name: 'minPrice',
+        in: 'query',
+        schema: { type: 'number' },
+      },
+      {
+        name: 'maxPrice',
+        in: 'query',
+        schema: { type: 'number' },
+      },
+      {
+        name: 'page',
+        in: 'query',
+        schema: { type: 'integer', default: 1 },
+      },
+      {
+        name: 'limit',
+        in: 'query',
+        schema: { type: 'integer', default: 10 },
+      },
+    ],
+    responses: {
+      200: {
+        description: 'Products retrieved',
+        content: {
+          'application/json': {
+            schema: successEnvelope(
+              200,
+              'Products retrieved',
+              '#/components/schemas/ProductListResponse'
+            ),
+          },
+        },
+      },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
   },
+
+  post: {
+    tags: ['Products'],
+    summary: 'Create a product (Farmer)',
+    security: [{ bearerAuth: [] }],
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/ProductCreateInput' },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: 'Product created',
+        content: {
+          'application/json': {
+            schema: successEnvelope(
+              201,
+              'Product created',
+              '#/components/schemas/ProductResponse'
+            ),
+          },
+        },
+      },
+      400: { $ref: '#/components/responses/ValidationError' },
+      401: { $ref: '#/components/responses/Unauthorized' },
+      403: { $ref: '#/components/responses/Forbidden' },
+      404: { $ref: '#/components/responses/NotFound' },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
+  },
+},
+
+'/api/products/{id}': {
+  get: {
+    tags: ['Products'],
+    summary: 'Get product by ID',
+    parameters: [
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      },
+    ],
+    responses: {
+      200: {
+        description: 'Product retrieved',
+        content: {
+          'application/json': {
+            schema: successEnvelope(
+              200,
+              'Product retrieved',
+              '#/components/schemas/ProductResponse'
+            ),
+          },
+        },
+      },
+      404: { $ref: '#/components/responses/NotFound' },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
+  },
+
+  put: {
+    tags: ['Products'],
+    summary: 'Update my product (Farmer)',
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      },
+    ],
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/ProductUpdateInput' },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Product updated',
+        content: {
+          'application/json': {
+            schema: successEnvelope(
+              200,
+              'Product updated',
+              '#/components/schemas/ProductResponse'
+            ),
+          },
+        },
+      },
+      400: { $ref: '#/components/responses/ValidationError' },
+      401: { $ref: '#/components/responses/Unauthorized' },
+      403: { $ref: '#/components/responses/Forbidden' },
+      404: { $ref: '#/components/responses/NotFound' },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
+  },
+
+  delete: {
+    tags: ['Products'],
+    summary: 'Delete my product (Farmer)',
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      },
+    ],
+    responses: {
+      200: {
+        description: 'Product deleted',
+        content: {
+          'application/json': {
+            schema: successEnvelope(200, 'Product deleted', null),
+          },
+        },
+      },
+      401: { $ref: '#/components/responses/Unauthorized' },
+      403: { $ref: '#/components/responses/Forbidden' },
+      404: { $ref: '#/components/responses/NotFound' },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
+  },
+},
+
+'/api/products/my-products': {
+  get: {
+    tags: ['Products'],
+    summary: 'Get my products (Farmer)',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: 'My products retrieved',
+        content: {
+          'application/json': {
+            schema: successEnvelope(
+              200,
+              'My products retrieved',
+              '#/components/schemas/ProductResponse'
+            ),
+          },
+        },
+      },
+      401: { $ref: '#/components/responses/Unauthorized' },
+      403: { $ref: '#/components/responses/Forbidden' },
+      404: { $ref: '#/components/responses/NotFound' },
+      500: { $ref: '#/components/responses/InternalServerError' },
+    },
+  },
+},
+  },
+
 };

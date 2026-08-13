@@ -44,3 +44,16 @@ POST /api/farmer-requests
              │
              ▼
       FarmerRequest
+
+      
+
+ 1: Farmer Request Lifecycle (FULLY BUILT)
+
+      | File                                                       | What It Does Now                                                                                         |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `src/model/farmer.model.js`                                | **Created** — stores approved farmer profiles                                                            |
+| `src/validators/farmerRequest.validator.js`                | **Updated** — added `updateFarmerRequestSchema` (partial)                                                |
+| `src/services/farmerRequest.service.js`                    | **Rewritten** — all 8 functions active (create, getMy, update, delete, getAll, getById, approve, reject) |
+| `src/Controller/farmerRequest/farmerRequest.controller.js` | **Rewritten** — all controllers use `asyncHandler` + `ApiResponse`                                       |
+| `src/routes/farmerRequest.routes.js`                       | **Rewritten** — 8 endpoints wired with proper auth guards                                                |
+| `src/docs/swagger.js`                                      | **Updated** — all farmer request endpoints documented                                                    |

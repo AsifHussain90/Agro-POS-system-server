@@ -1,13 +1,14 @@
 import express from 'express';
-
-import {getMyFarmerProfile,updateMyFarmerProfile} from "../Controller/farmer/farmer.controller.js";
-
 import { verifyJWT, isFarmer } from '../middlewares/auth.middleware.js';
+import {
+  getMyFarmerProfile,
+  updateMyFarmerProfile,
+} from '../Controller/farmer/farmer.controller.js';
 
 const router = express.Router();
 
-router.use(verifyJWT);
-router.use(isFarmer);
+// All farmer profile routes require JWT + farmer role
+router.use(verifyJWT, isFarmer);
 
 // GET /api/farmer/me
 router.get('/me', getMyFarmerProfile);

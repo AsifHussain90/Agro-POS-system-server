@@ -1,0 +1,439 @@
+| Method  | Route                       | Access             | Description                                   |
+| ------- | --------------------------- | ------------------ | --------------------------------------------- |
+| `POST`  | `/api/orders`               | Buyer              | Place order (auto-decrements stock)           |
+| `GET`   | `/api/orders/my-orders`     | Buyer              | View my orders                                |
+| `GET`   | `/api/orders/farmer-orders` | Farmer             | View orders for my products                   |
+| `GET`   | `/api/orders/:id`           | Buyer/Farmer/Admin | View specific order                           |
+| `PATCH` | `/api/orders/:id/status`    | Buyer/Farmer/Admin | Update status (pending → completed/cancelled) |
+
+
+Order Lifecycle
+                         ORDER API
+                            │
+                            ▼
+                       HTTP Request
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │   orders.routes   │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                       verifyJWT
+                            │
+             ┌──────────────┼──────────────┐
+             │              │              │
+          isBuyer        isFarmer       isAdmin
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                            ▼
+                    Zod Validation
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │    Controller     │
+                  │                   │
+                  │ req.user          │
+                  │ req.params        │
+                  │ req.body          │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │      Service      │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                         MongoDB
+1. POST /api/orders — Place Order
+
+Access: Buyer
+
+This is the most important order flow because it needs to check stock and decrement it.
+
+POST /api/orders
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│     isBuyer      │
+└────────┬─────────┘
+         │
+         │ role === "buyer"
+         ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│       Controller         │
+│                          │
+│ req.user._id             │
+│ req.body                 │
+└────────────┬─────────────┘
+             │
+             ▼
+┌──────────────────────────────┐
+│           Service            │
+│                              │
+│ Find Product                 │
+│ Check product exists         │
+│ Check available stock        │
+│ Check requested quantity     │
+│ Calculate total              │
+│ Decrement stock              │
+│ Create Order                 │
+│ status = pending             │
+└──────────────┬───────────────┘
+               │
+               ▼
+            MongoDB
+          /          \
+         ▼            ▼
+     Product         Order
+   stock - qty      created
+Example
+
+Suppose:
+
+Product
+price = 500
+stock = 20
+
+Buyer orders:
+
+quantity = 3
+
+Service does:
+
+20 - 3 = 17
+
+Then creates:
+
+Order
+quantity = 3
+price = 500
+total = 1500
+status = pending
+buyerId = currentUser._id
+
+The important rule is:
+
+Requested quantity <= Available stock
+
+If the buyer requests 25 while stock is only 20:
+
+❌ Order rejected
+❌ Stock unchanged
+❌ No order created
+
+Ideally, stock decrement + order creation should happen in a MongoDB transaction so they cannot get out of sync.
+
+2. GET /api/orders/my-orders — Buyer Orders
+
+Access: Buyer
+
+This returns only orders belonging to the logged-in buyer.
+
+GET /api/orders/my-orders
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│     isBuyer      │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.user._id     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find orders              │
+│ WHERE buyerId =          │
+│ req.user._id             │
+│                          │
+│ Populate product/farmer  │
+└────────────┬─────────────┘
+             │
+             ▼
+          MongoDB
+             │
+             ▼
+        My Orders
+
+The backend should use:
+
+req.user._id
+
+instead of allowing the buyer to provide someone else's ID.
+
+3. GET /api/orders/farmer-orders — Farmer Orders
+
+Access: Farmer
+
+This is the farmer's view of orders containing their products.
+
+GET /api/orders/farmer-orders
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         │ req.user
+         ▼
+┌──────────────────┐
+│    isFarmer      │
+└────────┬─────────┘
+         │
+         │ role === "farmer"
+         ▼
+┌──────────────────┐
+│    Controller    │
+│                  │
+│ req.user._id     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│         Service          │
+│                          │
+│ Find orders containing   │
+│ products owned by        │
+│ current farmer           │
+└────────────┬─────────────┘
+             │
+             ▼
+          MongoDB
+             │
+             ▼
+      Farmer's Orders
+
+Conceptually:
+
+Farmer
+  │
+  ▼
+Find my products
+  │
+  ▼
+Find orders containing those products
+  │
+  ▼
+Return orders
+
+So Farmer A should not see orders for Farmer B's products.
+
+4. GET /api/orders/:id — Specific Order
+
+Access: Buyer / Farmer / Admin
+
+This endpoint has three different authorization cases.
+
+GET /api/orders/:id
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│      Buyer/Farmer/Admin     │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│         Controller           │
+│                             │
+│ req.user                    │
+│ req.params.id               │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│           Service           │
+│                             │
+│ Find Order                  │
+│                             │
+│ Admin?                      │
+│    → Allow                  │
+│                             │
+│ Buyer?                      │
+│    → Check buyerId          │
+│                             │
+│ Farmer?                     │
+│    → Check product farmerId │
+└──────────────┬──────────────┘
+               │
+               ▼
+            MongoDB
+               │
+               ▼
+             Order
+
+The key is authorization based on ownership.
+
+Buyer
+order.buyerId === req.user._id
+Farmer
+order contains product
+AND
+product.farmerId === req.user._id
+Admin
+
+Admin can access the order directly.
+
+5. PATCH /api/orders/:id/status — Update Order Status
+
+Access: Buyer / Farmer / Admin
+
+This endpoint needs status transition rules.
+
+PATCH /api/orders/:id/status
+        │
+        │ Authorization: Bearer <token>
+        ▼
+┌──────────────────┐
+│    verifyJWT     │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│      Buyer/Farmer/Admin     │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌──────────────────┐
+│     validate     │
+│       Zod        │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│         Controller           │
+│                             │
+│ req.user                    │
+│ req.params.id               │
+│ req.body.status             │
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│           Service           │
+│                             │
+│ Find Order                  │
+│ Check ownership/permission  │
+│ Check current status        │
+│ Validate status transition  │
+│ Update status               │
+└──────────────┬──────────────┘
+               │
+               ▼
+            MongoDB
+               │
+               ▼
+         Updated Order
+
+For example:
+
+pending
+   │
+   ├──────────────► completed
+   │
+   └──────────────► cancelled
+
+You should prevent invalid transitions such as:
+
+completed → pending
+completed → cancelled
+cancelled → completed
+
+unless your business rules explicitly allow them.
+
+Complete Order Lifecycle
+                         BUYER
+                           │
+                           │ POST /orders
+                           ▼
+                    ┌──────────────┐
+                    │ Check Product│
+                    └──────┬───────┘
+                           │
+                           ▼
+                    Check Stock
+                           │
+                 ┌─────────┴─────────┐
+                 │                   │
+              Available           Not enough
+                 │                   │
+                 ▼                   ▼
+          Decrement Stock          Reject
+                 │
+                 ▼
+           Create Order
+                 │
+                 ▼
+             pending
+                 │
+          ┌──────┴──────┐
+          │             │
+       Complete       Cancel
+          │             │
+          ▼             ▼
+      completed      cancelled
+Overall API Architecture
+                         CLIENT
+                            │
+                            ▼
+                    orders.routes.js
+                            │
+                            ▼
+                       verifyJWT
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+       isBuyer           isFarmer          isAdmin
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+                            ▼
+                     Zod Validation
+                            │
+                            ▼
+                   Order Controller
+                            │
+                            ▼
+                     Order Service
+                            │
+                ┌───────────┼───────────┐
+                │           │           │
+                ▼           ▼           ▼
+             Product      Order       Farmer
+              Model        Model       Model
+                │           │           │
+                └───────────┼───────────┘
+                            ▼
+                         MongoDB

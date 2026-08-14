@@ -942,6 +942,200 @@ export const swaggerDocument = {
           },
         },
       },
+      OrderItemInput: {
+        type: 'object',
+        required: ['productId', 'quantity'],
+        properties: {
+          productId: {
+            type: 'string',
+            example: '64a1b2c3d4e5f6a7b8c9d0e3',
+          },
+          quantity: {
+            type: 'integer',
+            minimum: 1,
+            example: 5,
+          },
+        },
+      },
+
+      OrderCreateInput: {
+        type: 'object',
+        required: ['products'],
+        properties: {
+          products: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              $ref: '#/components/schemas/OrderItemInput',
+            },
+            example: [
+              { productId: '64a1b2c3d4e5f6a7b8c9d0e3', quantity: 5 },
+              { productId: '64a1b2c3d4e5f6a7b8c9d0e4', quantity: 2 },
+            ],
+          },
+        },
+      },
+
+      OrderStatusUpdateInput: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['pending', 'completed', 'cancelled'],
+            example: 'completed',
+          },
+        },
+      },
+
+      OrderItemResponse: {
+        type: 'object',
+        properties: {
+          product: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              name: { type: 'string', example: 'Organic Tomatoes' },
+              price: { type: 'number', example: 150.5 },
+              category: { type: 'string', example: 'vegetables' },
+            },
+          },
+          quantity: {
+            type: 'integer',
+            example: 5,
+          },
+          price: {
+            type: 'number',
+            example: 150.5,
+          },
+        },
+      },
+
+      OrderResponse: {
+        type: 'object',
+        properties: {
+          _id: {
+            type: 'string',
+            example: '64a1b2c3d4e5f6a7b8c9d0f1',
+          },
+          buyer: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              fullName: { type: 'string', example: 'Jane Doe' },
+              email: { type: 'string', example: 'jane@example.com' },
+            },
+          },
+          farmer: {
+            type: 'object',
+            properties: {
+              _id: { type: 'string' },
+              fullName: { type: 'string', example: 'John Farmer' },
+              email: { type: 'string', example: 'john@farm.com' },
+            },
+          },
+          products: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/OrderItemResponse',
+            },
+          },
+          totalAmount: {
+            type: 'number',
+            example: 752.5,
+          },
+          status: {
+            type: 'string',
+            enum: ['pending', 'completed', 'cancelled'],
+            example: 'pending',
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time',
+          },
+        },
+      },
+      PaginatedUsersResponse: {
+        type: 'object',
+        properties: {
+          data: {
+            type: 'array',
+            items: {
+              $ref: '#/components/schemas/SafeUser',
+            },
+          },
+          total: {
+            type: 'integer',
+            example: 100,
+          },
+          page: {
+            type: 'integer',
+            example: 1,
+          },
+          limit: {
+            type: 'integer',
+            example: 10,
+          },
+          totalPages: {
+            type: 'integer',
+            example: 10,
+          },
+        },
+      },
+
+      DashboardStatsResponse: {
+        type: 'object',
+        properties: {
+          users: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer', example: 150 },
+              farmers: { type: 'integer', example: 30 },
+            },
+          },
+          products: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer', example: 500 },
+            },
+          },
+          orders: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer', example: 200 },
+              pending: { type: 'integer', example: 50 },
+              completed: { type: 'integer', example: 140 },
+              cancelled: { type: 'integer', example: 10 },
+            },
+          },
+          farmerRequests: {
+            type: 'object',
+            properties: {
+              pending: { type: 'integer', example: 15 },
+              approved: { type: 'integer', example: 30 },
+              rejected: { type: 'integer', example: 5 },
+            },
+          },
+        },
+      },
+
+      ToggleBlockResponse: {
+        type: 'object',
+        properties: {
+          userId: {
+            type: 'string',
+            example: '64a1b2c3d4e5f6a7b8c9d0e1',
+          },
+          isBlocked: {
+            type: 'boolean',
+            example: true,
+          },
+        },
+      },
 
       ProfileImageData: {
         type: 'object',
@@ -1726,7 +1920,7 @@ export const swaggerDocument = {
         },
       },
     },
-
+    //PRODUCT APIs
     '/api/products': {
       get: {
         tags: ['Products'],
@@ -1936,6 +2130,282 @@ export const swaggerDocument = {
           401: { $ref: '#/components/responses/Unauthorized' },
           403: { $ref: '#/components/responses/Forbidden' },
           404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+    //ORDER APIs
+    '/api/orders': {
+      post: {
+        tags: ['Orders'],
+        summary: 'Place an order (Buyer)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/OrderCreateInput' },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Order placed',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  201,
+                  'Order placed',
+                  '#/components/schemas/OrderResponse'
+                ),
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/orders/my-orders': {
+      get: {
+        tags: ['Orders'],
+        summary: 'Get my orders (Buyer)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Buyer orders retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Orders retrieved',
+                  '#/components/schemas/OrderResponse'
+                ),
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/orders/farmer-orders': {
+      get: {
+        tags: ['Orders'],
+        summary: 'Get orders for my products (Farmer)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Farmer orders retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Orders retrieved',
+                  '#/components/schemas/OrderResponse'
+                ),
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/orders/{id}': {
+      get: {
+        tags: ['Orders'],
+        summary: 'Get order by ID',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Order retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Order retrieved',
+                  '#/components/schemas/OrderResponse'
+                ),
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+
+      patch: {
+        tags: ['Orders'],
+        summary: 'Update order status',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/OrderStatusUpdateInput' },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: 'Order status updated',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Order status updated',
+                  '#/components/schemas/OrderResponse'
+                ),
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Get all users (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', default: 10 },
+          },
+          {
+            name: 'role',
+            in: 'query',
+            schema: { type: 'string', enum: ['user', 'farmer', 'admin'] },
+          },
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Search by fullName or email',
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', default: 'createdAt' },
+          },
+          {
+            name: 'sortOrder',
+            in: 'query',
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Users retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Users retrieved',
+                  '#/components/schemas/PaginatedUsersResponse'
+                ),
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/admin/users/{id}/block': {
+      patch: {
+        tags: ['Admin'],
+        summary: 'Toggle block/unblock user (Admin)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'User block status toggled',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'User block status updated',
+                  '#/components/schemas/ToggleBlockResponse'
+                ),
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+    },
+
+    '/api/admin/dashboard': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Get dashboard statistics (Admin)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Dashboard statistics retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Dashboard statistics retrieved',
+                  '#/components/schemas/DashboardStatsResponse'
+                ),
+              },
+            },
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
           500: { $ref: '#/components/responses/InternalServerError' },
         },
       },

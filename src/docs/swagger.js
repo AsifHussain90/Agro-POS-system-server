@@ -1728,218 +1728,217 @@ export const swaggerDocument = {
     },
 
     '/api/products': {
-  get: {
-    tags: ['Products'],
-    summary: 'Get all products',
-    parameters: [
-      {
-        name: 'search',
-        in: 'query',
-        schema: { type: 'string' },
-        description: 'Text search across name, description, and category',
+      get: {
+        tags: ['Products'],
+        summary: 'Get all products',
+        parameters: [
+          {
+            name: 'search',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Text search across name, description, and category',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+          },
+          {
+            name: 'minPrice',
+            in: 'query',
+            schema: { type: 'number' },
+          },
+          {
+            name: 'maxPrice',
+            in: 'query',
+            schema: { type: 'number' },
+          },
+          {
+            name: 'page',
+            in: 'query',
+            schema: { type: 'integer', default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', default: 10 },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Products retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Products retrieved',
+                  '#/components/schemas/ProductListResponse'
+                ),
+              },
+            },
+          },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
       },
-      {
-        name: 'category',
-        in: 'query',
-        schema: { type: 'string' },
-      },
-      {
-        name: 'minPrice',
-        in: 'query',
-        schema: { type: 'number' },
-      },
-      {
-        name: 'maxPrice',
-        in: 'query',
-        schema: { type: 'number' },
-      },
-      {
-        name: 'page',
-        in: 'query',
-        schema: { type: 'integer', default: 1 },
-      },
-      {
-        name: 'limit',
-        in: 'query',
-        schema: { type: 'integer', default: 10 },
-      },
-    ],
-    responses: {
-      200: {
-        description: 'Products retrieved',
-        content: {
-          'application/json': {
-            schema: successEnvelope(
-              200,
-              'Products retrieved',
-              '#/components/schemas/ProductListResponse'
-            ),
+
+      post: {
+        tags: ['Products'],
+        summary: 'Create a product (Farmer)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ProductCreateInput' },
+            },
           },
         },
-      },
-      500: { $ref: '#/components/responses/InternalServerError' },
-    },
-  },
-
-  post: {
-    tags: ['Products'],
-    summary: 'Create a product (Farmer)',
-    security: [{ bearerAuth: [] }],
-    requestBody: {
-      required: true,
-      content: {
-        'application/json': {
-          schema: { $ref: '#/components/schemas/ProductCreateInput' },
+        responses: {
+          201: {
+            description: 'Product created',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  201,
+                  'Product created',
+                  '#/components/schemas/ProductResponse'
+                ),
+              },
+            },
+          },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
         },
       },
     },
-    responses: {
-      201: {
-        description: 'Product created',
-        content: {
-          'application/json': {
-            schema: successEnvelope(
-              201,
-              'Product created',
-              '#/components/schemas/ProductResponse'
-            ),
+
+    '/api/products/{id}': {
+      get: {
+        tags: ['Products'],
+        summary: 'Get product by ID',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          200: {
+            description: 'Product retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Product retrieved',
+                  '#/components/schemas/ProductResponse'
+                ),
+              },
+            },
+          },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
+        },
+      },
+
+      put: {
+        tags: ['Products'],
+        summary: 'Update my product (Farmer)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ProductUpdateInput' },
+            },
           },
         },
-      },
-      400: { $ref: '#/components/responses/ValidationError' },
-      401: { $ref: '#/components/responses/Unauthorized' },
-      403: { $ref: '#/components/responses/Forbidden' },
-      404: { $ref: '#/components/responses/NotFound' },
-      500: { $ref: '#/components/responses/InternalServerError' },
-    },
-  },
-},
-
-'/api/products/{id}': {
-  get: {
-    tags: ['Products'],
-    summary: 'Get product by ID',
-    parameters: [
-      {
-        name: 'id',
-        in: 'path',
-        required: true,
-        schema: { type: 'string' },
-      },
-    ],
-    responses: {
-      200: {
-        description: 'Product retrieved',
-        content: {
-          'application/json': {
-            schema: successEnvelope(
-              200,
-              'Product retrieved',
-              '#/components/schemas/ProductResponse'
-            ),
+        responses: {
+          200: {
+            description: 'Product updated',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'Product updated',
+                  '#/components/schemas/ProductResponse'
+                ),
+              },
+            },
           },
+          400: { $ref: '#/components/responses/ValidationError' },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
         },
       },
-      404: { $ref: '#/components/responses/NotFound' },
-      500: { $ref: '#/components/responses/InternalServerError' },
-    },
-  },
 
-  put: {
-    tags: ['Products'],
-    summary: 'Update my product (Farmer)',
-    security: [{ bearerAuth: [] }],
-    parameters: [
-      {
-        name: 'id',
-        in: 'path',
-        required: true,
-        schema: { type: 'string' },
-      },
-    ],
-    requestBody: {
-      required: true,
-      content: {
-        'application/json': {
-          schema: { $ref: '#/components/schemas/ProductUpdateInput' },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: 'Product updated',
-        content: {
-          'application/json': {
-            schema: successEnvelope(
-              200,
-              'Product updated',
-              '#/components/schemas/ProductResponse'
-            ),
+      delete: {
+        tags: ['Products'],
+        summary: 'Delete my product (Farmer)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'string' },
           },
-        },
-      },
-      400: { $ref: '#/components/responses/ValidationError' },
-      401: { $ref: '#/components/responses/Unauthorized' },
-      403: { $ref: '#/components/responses/Forbidden' },
-      404: { $ref: '#/components/responses/NotFound' },
-      500: { $ref: '#/components/responses/InternalServerError' },
-    },
-  },
-
-  delete: {
-    tags: ['Products'],
-    summary: 'Delete my product (Farmer)',
-    security: [{ bearerAuth: [] }],
-    parameters: [
-      {
-        name: 'id',
-        in: 'path',
-        required: true,
-        schema: { type: 'string' },
-      },
-    ],
-    responses: {
-      200: {
-        description: 'Product deleted',
-        content: {
-          'application/json': {
-            schema: successEnvelope(200, 'Product deleted', null),
+        ],
+        responses: {
+          200: {
+            description: 'Product deleted',
+            content: {
+              'application/json': {
+                schema: successEnvelope(200, 'Product deleted', null),
+              },
+            },
           },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
         },
       },
-      401: { $ref: '#/components/responses/Unauthorized' },
-      403: { $ref: '#/components/responses/Forbidden' },
-      404: { $ref: '#/components/responses/NotFound' },
-      500: { $ref: '#/components/responses/InternalServerError' },
     },
-  },
-},
 
-'/api/products/my-products': {
-  get: {
-    tags: ['Products'],
-    summary: 'Get my products (Farmer)',
-    security: [{ bearerAuth: [] }],
-    responses: {
-      200: {
-        description: 'My products retrieved',
-        content: {
-          'application/json': {
-            schema: successEnvelope(
-              200,
-              'My products retrieved',
-              '#/components/schemas/ProductResponse'
-            ),
+    '/api/products/my-products': {
+      get: {
+        tags: ['Products'],
+        summary: 'Get my products (Farmer)',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'My products retrieved',
+            content: {
+              'application/json': {
+                schema: successEnvelope(
+                  200,
+                  'My products retrieved',
+                  '#/components/schemas/ProductResponse'
+                ),
+              },
+            },
           },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          404: { $ref: '#/components/responses/NotFound' },
+          500: { $ref: '#/components/responses/InternalServerError' },
         },
       },
-      401: { $ref: '#/components/responses/Unauthorized' },
-      403: { $ref: '#/components/responses/Forbidden' },
-      404: { $ref: '#/components/responses/NotFound' },
-      500: { $ref: '#/components/responses/InternalServerError' },
     },
   },
-},
-  },
-
 };

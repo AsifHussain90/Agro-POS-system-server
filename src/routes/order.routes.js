@@ -7,7 +7,7 @@ import {
   getFarmerOrdersController,
   getOrderByIdController,
   updateOrderStatusController,
-} from '../Controller/order/order.controller.js';
+} from '../Controller/orders/order.controller.js';
 import {
   createOrderSchema,
   updateOrderStatusSchema,

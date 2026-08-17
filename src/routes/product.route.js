@@ -16,16 +16,16 @@ import {
 
 const router = express.Router();
 
-// ── Public routes ────────────────────────────────────────────────────────────
+// ── Public: list all products ────────────────────────────────────────────────
 router.get('/', getAllProductsController);
+
+// ── Farmer-only: must be registered before the public GET /:id below ────────
+router.get('/my-products', verifyJWT, isFarmer, getMyProductsController);
+router.post('/', verifyJWT, isFarmer, validate(createProductSchema), createProductController);
+router.put('/:id', verifyJWT, isFarmer, validate(updateProductSchema), updateProductController);
+router.delete('/:id', verifyJWT, isFarmer, deleteProductController);
+
+// ── Public: get a single product (registered last so it can't shadow /my-products) ──
 router.get('/:id', getProductByIdController);
-
-// ── Farmer-only routes ───────────────────────────────────────────────────────
-router.use(verifyJWT, isFarmer);
-
-router.post('/', validate(createProductSchema), createProductController);
-router.get('/my-products', getMyProductsController);
-router.put('/:id', validate(updateProductSchema), updateProductController);
-router.delete('/:id', deleteProductController);
 
 export { router as productRoutes };

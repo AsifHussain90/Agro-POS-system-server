@@ -1,5 +1,8 @@
 // Generates access and refresh tokens for the user
+import {User} from '../model/user.model.js';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const getTokenSecret = (primaryName, legacyName) => {
   const secret = process.env[primaryName] || process.env[legacyName];
@@ -31,21 +34,21 @@ const getRefreshTokenExpiry = () =>
   process.env.SECRET_REFRESH_TOKEN_EXPIRY ||
   '7d';
 
-const generateAccessToken = (user) => {
+const generateAccessToken = (User) => {
   return jwt.sign(
     {
-      _id: user._id,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
+      _id: User._id,
+      fullName: User.fullName,
+      email: User.email,
+      role: User .role,
     },
     getAccessTokenSecret(),
     { expiresIn: getAccessTokenExpiry() }
   );
 };
 
-const generateRefreshToken = (user) => {
-  return jwt.sign({ _id: user._id }, getRefreshTokenSecret(), {
+const generateRefreshToken = (User) => {
+  return jwt.sign({ _id: User._id }, getRefreshTokenSecret(), {
     expiresIn: getRefreshTokenExpiry(),
   });
 };

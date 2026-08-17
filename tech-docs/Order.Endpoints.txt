@@ -1,3 +1,5 @@
+Main Endpoints 
+
 | Method  | Route                       | Access             | Description                                   |
 | ------- | --------------------------- | ------------------ | --------------------------------------------- |
 | `POST`  | `/api/orders`               | Buyer              | Place order (auto-decrements stock)           |

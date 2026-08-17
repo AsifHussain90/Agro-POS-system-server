@@ -1,48 +1,31 @@
 import express from 'express';
-
+import { verifyJWT, isAdmin } from '../middlewares/auth.middleware.js';
+import {
+  getAllUsersController,
+  toggleBlockUserController,
+  getDashboardStatsController,
+} from '../Controller/Admin/admin.controller.js';
 import {
   getAllFarmerRequests,
   getFarmerRequestById,
   approveFarmerRequest,
   rejectFarmerRequest,
-} from '../controllers/adminFarmerRequest.controller.js';
-
-import {
-  verifyJWT,
-  isAdmin,
-} from '../middlewares/auth.middleware.js';
+} from '../Controller/Admin/adminFarmerRequest.controller.js';
 
 const router = express.Router();
 
-/*
- * All admin routes require:
- * 1. Valid JWT
- * 2. Admin role
- */
+// All admin routes require JWT + admin role
 router.use(verifyJWT, isAdmin);
 
-// GET /api/admin/farmer-requests
-router.get(
-  '/farmer-requests',
-  getAllFarmerRequests
-);
+// ── Users & dashboard ────────────────────────────────────────────────────────
+router.get('/users', getAllUsersController);
+router.patch('/users/:id/block', toggleBlockUserController);
+router.get('/dashboard', getDashboardStatsController);
 
-// GET /api/admin/farmer-requests/:id
-router.get(
-  '/farmer-requests/:id',
-  getFarmerRequestById
-);
+// ── Farmer request review ────────────────────────────────────────────────────
+router.get('/farmer-requests', getAllFarmerRequests);
+router.get('/farmer-requests/:id', getFarmerRequestById);
+router.patch('/farmer-requests/:id/approve', approveFarmerRequest);
+router.patch('/farmer-requests/:id/reject', rejectFarmerRequest);
 
-// PATCH /api/admin/farmer-requests/:id/approve
-router.patch(
-  '/farmer-requests/:id/approve',
-  approveFarmerRequest
-);
-
-// PATCH /api/admin/farmer-requests/:id/reject
-router.patch(
-  '/farmer-requests/:id/reject',
-  rejectFarmerRequest
-);
-
-export default router;
+export { router as adminRoutes };

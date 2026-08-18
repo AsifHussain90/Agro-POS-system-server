@@ -22,7 +22,7 @@ test('approveFarmerRequestService promotes the user to farmer and resets passwor
     _id: 'user-1',
     role: 'visitor',
     password: 'old-password',
-    mustChangePassword: false,
+    ChangePassword: false,
     save: async function () {
       return this;
     },
@@ -58,7 +58,7 @@ test('approveFarmerRequestService promotes the user to farmer and resets passwor
 
   assert.equal(result.request.status, 'approved');
   assert.equal(result.user.role, 'farmer');
-  assert.equal(result.user.mustChangePassword, true);
+  assert.equal(result.user.ChangePassword, true);
   assert.equal(createdFarmer[0].requestId, 'request-1');
   assert.match(result.temporaryPassword, /^Temp/);
 });

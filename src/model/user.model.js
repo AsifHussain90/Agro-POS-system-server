@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password is required'],
     },
-    mustChangePassword: {
+    ChangePassword: {
       type: Boolean,
       default: false,
     },
@@ -45,13 +45,10 @@ const userSchema = new mongoose.Schema(
     },
     refreshToken: {
       type: String,
-      default: null,
-      select: false,
     },
     refreshTokenVersion: {
       type: Number,
       default: 0,
-      select: false,
     },
   },
   { timestamps: true }

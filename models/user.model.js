@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Password is required'],
     },
-    mustChangePassword: {
+    ChangePassword: {
       type: Boolean,
       default: false,
     },

@@ -44,7 +44,7 @@ export const registerVisitor = asyncHandler(async (req, res) => {
     ...req.body,
     email: normalizedEmail,
     role: 'visitor',
-    mustChangePassword: false,
+    ChangePassword: false,
   });
 
   const tokens = await issueTokens(user, res);
@@ -58,7 +58,7 @@ export const registerVisitor = asyncHandler(async (req, res) => {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
-          mustChangePassword: user.mustChangePassword,
+          ChangePassword: user.ChangePassword,
         },
         accessToken: tokens.accessToken,
       },
@@ -81,12 +81,12 @@ export const loginVisitor = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid email or password');
   }
 
-  if (user.mustChangePassword) {
+  if (user.ChangePassword) {
     return res.status(403).json({
       success: false,
       message: 'Password change required',
       data: {
-        mustChangePassword: true,
+        ChangePassword: true,
         user: {
           id: user._id,
           fullName: user.fullName,
@@ -108,7 +108,7 @@ export const loginVisitor = asyncHandler(async (req, res) => {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
-          mustChangePassword: user.mustChangePassword,
+          ChangePassword: user.ChangePassword,
         },
         accessToken: tokens.accessToken,
       },
@@ -130,7 +130,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password = req.body.newPassword;
-  user.mustChangePassword = false;
+  user.ChangePassword = false;
   await user.save();
 
   return res

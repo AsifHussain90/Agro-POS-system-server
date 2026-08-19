@@ -1,9 +1,3 @@
-//this file is a middleware for handling file uploads using multer.
-//  It provides functionality for single and multiple file uploads,
-//  as well as error handling for various upload scenarios.
-//  The middleware uses memory storage to allow direct streaming of files to cloud
-//  storage services like S3 or Cloudinary.
-
 import multer from 'multer';
 import ApiError from '../utils/errorHandler.js';
 import {
@@ -11,7 +5,6 @@ import {
   MAX_FILE_SIZE_BYTES,
 } from '../validators/upload.validator.js';
 
-// Use memoryStorage for direct streaming to S3/Cloudinary/Local
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
@@ -31,14 +24,11 @@ const fileFilter = (req, file, cb) => {
 export const multerUpload = multer({
   storage,
   limits: {
-    fileSize: MAX_FILE_SIZE_BYTES, // 5 MB
+    fileSize: MAX_FILE_SIZE_BYTES,
   },
   fileFilter,
 });
 
-/**
- * Handle Multer upload errors gracefully
- */
 const handleMulterError = (err, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -54,9 +44,6 @@ const handleMulterError = (err, next) => {
   return next(err);
 };
 
-/**
- * Middleware wrapper for single file upload
- */
 export const uploadSingle =
   (fieldName = 'file') =>
   (req, res, next) => {
@@ -66,9 +53,6 @@ export const uploadSingle =
     });
   };
 
-/**
- * Middleware wrapper for multiple files upload
- */
 export const uploadArray =
   (fieldName = 'files', maxCount = 5) =>
   (req, res, next) => {
@@ -78,9 +62,6 @@ export const uploadArray =
     });
   };
 
-/**
- * Middleware wrapper for multiple named field uploads
- */
 export const uploadFields = (fields) => (req, res, next) => {
   multerUpload.fields(fields)(req, res, (err) => {
     if (err) return handleMulterError(err, next);

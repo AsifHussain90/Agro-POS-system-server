@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { z } from 'zod';
 
 export const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
@@ -37,9 +38,14 @@ export const errorHandler = (err, req, res, next) => {
     message = 'Token expired';
   }
 
-  // ── Zod / express-validator style errors ────────────────────
-  else if (Array.isArray(err.errors) && err.errors.length > 0 && !errors.length) {
-    errors = err.errors;
+  // ── Zod Validation Errors ───────────────────────────────────
+  else if (err instanceof z.ZodError) {
+    statusCode = 400;
+    message = 'Validation failed';
+    errors = err.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
   }
 
   // ── Hide stack in production ───────────────────────────────

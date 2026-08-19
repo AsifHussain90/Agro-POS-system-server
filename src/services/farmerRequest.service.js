@@ -90,11 +90,18 @@ export const createFarmerRequestService = ({
     return { deleted: true };
   },
 
-  getAllFarmerRequests: async () => {
-    return farmerRequestModel
-      .find()
-      .sort({ createdAt: -1 })
-      .populate('userId', 'fullName email role');
+    getAllFarmerRequests: async ({ page = 1, limit = 10 } = {}) => {
+    const skip = (Number(page) - 1) * Number(limit);
+    const [data, total] = await Promise.all([
+      farmerRequestModel
+        .find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('userId', 'fullName email role'),
+      farmerRequestModel.countDocuments(),
+    ]);
+    return { data, total, page: Number(page), limit: Number(limit) };
   },
 
   getFarmerRequestById: async (id) => {

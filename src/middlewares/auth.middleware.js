@@ -18,17 +18,22 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
   }
 
   let decoded;
-
   try {
     decoded = jwt.verify(token, getAccessTokenSecret());
   } catch {
     throw new ApiError(401, 'Unauthorized');
   }
 
-  req.user = await User.findById(decoded._id).select('-password -refreshToken');
+  req.user = await User.findById(decoded._id).select(
+    '-password -refreshToken'
+  );
 
   if (!req.user) {
     throw new ApiError(401, 'Unauthorized');
+  }
+
+  if (!req.user.isActive) {
+    throw new ApiError(403, 'Account deactivated');
   }
 
   if (req.user.isBlocked) {
@@ -38,19 +43,38 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
   next();
 });
 
+export const checkActive = asyncHandler(async (req, res, next) => {
+  if (!req.user?.isActive) {
+    throw new ApiError(403, 'Account deactivated');
+  }
+  next();
+});
+
 const checkRole = (role) =>
   asyncHandler(async (req, res, next) => {
     if (!req.user) {
       throw new ApiError(401, 'Unauthorized');
     }
-
     if (req.user.role !== role) {
       throw new ApiError(403, 'Forbidden');
     }
-
     next();
   });
 
 export const isAdmin = checkRole('admin');
 export const isFarmer = checkRole('farmer');
 export const isUser = checkRole('user');
+export const isBuyer = checkRole('buyer');
+export const isSuperAdmin = checkRole('superAdmin');
+
+export const requirePermission = (permission) =>
+  asyncHandler(async (req, res, next) => {
+    if (!req.user) {
+      throw new ApiError(401, 'Unauthorized');
+    }
+    const { hasPermission } = await import('../config/permissions.js');
+    if (!hasPermission(req.user.role, permission)) {
+      throw new ApiError(403, 'Forbidden');
+    }
+    next();
+  });

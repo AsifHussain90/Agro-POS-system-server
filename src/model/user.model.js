@@ -17,12 +17,16 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'visitor', 'admin', 'farmer'],
+      enum: ['superAdmin', 'admin', 'user', 'farmer', 'buyer'],
       default: 'user',
     },
     isBlocked: {
       type: Boolean,
       default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     password: {
       type: String,
@@ -51,6 +55,13 @@ const userSchema = new mongoose.Schema(
     refreshTokenVersion: {
       type: Number,
       default: 0,
+      select: false,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
     },
   },
   { timestamps: true }

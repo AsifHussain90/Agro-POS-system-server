@@ -15,7 +15,6 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-
     role: {
       type: String,
       enum: ['user', 'visitor', 'admin', 'farmer'],
@@ -30,7 +29,7 @@ const userSchema = new mongoose.Schema(
       required: [true, 'Password is required'],
       select: false,
     },
-    ChangePassword: {
+    changePassword: {
       type: Boolean,
       default: false,
     },
@@ -43,9 +42,11 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
+      _id: false,
     },
     refreshToken: {
       type: String,
+      select: false,
     },
     refreshTokenVersion: {
       type: Number,
@@ -57,7 +58,6 @@ const userSchema = new mongoose.Schema(
 
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
-
   this.password = await bcrypt.hash(this.password, 10);
 });
 
@@ -73,13 +73,9 @@ userSchema.methods.setRefreshToken = async function (refreshToken) {
 
 userSchema.methods.isRefreshTokenValid = async function (refreshToken) {
   if (!this.refreshToken) return false;
-
   return bcrypt.compare(refreshToken, this.refreshToken);
 };
 
-userSchema.methods.roles = function () {
-  return this.role;
-};
 userSchema.methods.clearRefreshToken = async function () {
   this.refreshToken = null;
   await this.save({ validateBeforeSave: false });

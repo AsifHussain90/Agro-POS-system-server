@@ -2,8 +2,8 @@
 // It takes in the response object, message, data and status code as parameters and returns
 //  a JSON response with the success status, message, data and status code.
 class ApiResponse {
-  constructor(statusCode, data, message) {
-    this.success = true;
+  constructor(statusCode, data, message = 'Success') {
+    this.success = statusCode < 400;
     this.statusCode = statusCode;
     this.message = message;
     this.data = data;

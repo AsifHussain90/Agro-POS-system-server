@@ -10,10 +10,10 @@ class ApiError extends Error {
   ) {
     super(message);
     this.statusCode = statusCode;
-    this.data = null; // Always null for error responses
+    this.data = null;
     this.message = message;
-    this.success = false; // Helps frontend quickly check status
-    this.errors = errors; // For validation arrays (e.g., express-validator)
+    this.success = false;
+    this.errors = errors;
 
     if (stack) {
       this.stack = stack;

@@ -38,7 +38,6 @@ export const createFarmerRequestService = ({
         location: payload.location,
         farmSize: payload.farmSize,
         crops: payload.crops,
-        certifications: payload.certifications || [],
         farmImages: payload.farmImages || [],
         status: 'pending',
       });

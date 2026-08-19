@@ -3,7 +3,6 @@ import { authRoutes } from './src/routes/auth.routes.js';
 import { uploadRoutes } from './src/routes/upload.routes.js';
 import { farmerRequestRoutes } from './src/routes/farmerRequest.routes.js';
 import { productRoutes } from './src/routes/product.route.js';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -12,16 +11,15 @@ import { setupSwagger } from './src/docs/swagger.setup.js';
 import farmerRoutes from './src/routes/farmer.route.js';
 import { orderRoutes } from './src/routes/order.routes.js';
 import { adminRoutes } from './src/routes/admin.routes.js';
-const app = express();
 
-dotenv.config();
+const app = express();
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5000'],
+  origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -34,7 +32,7 @@ app.use(
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'validator.swagger.io'],
+        imgSrc: ["'self'", 'data:', 'validator.swagger.io', 'res.cloudinary.com'],
         connectSrc: ["'self'"],
       },
     },

@@ -1,6 +1,11 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { loginSchema, registerSchema } from '../validators/auth.validator.js';
+import {
+  loginSchema,
+  registerSchema,
+  changePasswordSchema,
+  superAdminRegisterSchema,
+} from '../validators/auth.validator.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
 import {
@@ -9,24 +14,24 @@ import {
   logout,
   refreshAccessToken,
   profile,
+  changePassword,
+  superAdminRegister,
 } from '../Controller/auth/auth.controller.js';
 
 const router = express.Router();
 
-// ── Strict limiter for account creation ──────────────────────────────────────
 const registerLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, //  5 registrations per 15 min — prevents spam
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many registration attempts, please try again later.' },
 });
 
-// ── Moderate limiter for login ─────────────────────────────────────────────────
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, //  20 attempts per 15 min — allows failed passwords
+  windowMs: 15 * 60 * 1000,
+  max: 20,
   skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,8 +40,10 @@ const loginLimiter = rateLimit({
 
 router.post('/register', registerLimiter, validate(registerSchema), register);
 router.post('/signup', registerLimiter, validate(registerSchema), register);
+router.post('/superadmin-register', registerLimiter, validate(superAdminRegisterSchema), superAdminRegister);
 router.post('/login', loginLimiter, validate(loginSchema), login);
 router.get('/profile', verifyJWT, profile);
+router.post('/change-password', verifyJWT, validate(changePasswordSchema), changePassword);
 router.post('/logout', logout);
 router.post('/refresh-token', refreshAccessToken);
 

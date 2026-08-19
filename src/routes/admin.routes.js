@@ -4,28 +4,37 @@ import {
   getAllUsersController,
   toggleBlockUserController,
   getDashboardStatsController,
+  getAllOrdersAdminController,
+  getOrderByIdAdminController,
+  getAllBuyersController,
 } from '../Controller/Admin/admin.controller.js';
 import {
-  getAllFarmerRequests,
-  getFarmerRequestById,
-  approveFarmerRequest,
-  rejectFarmerRequest,
+  getAllFarmerRequestsController,
+  getFarmerRequestByIdController,
+  approveFarmerRequestController,
+  rejectFarmerRequestController,
 } from '../Controller/Admin/adminFarmerRequest.controller.js';
 
 const router = express.Router();
 
-// All admin routes require JWT + admin role
 router.use(verifyJWT, isAdmin);
 
-// ── Users & dashboard ────────────────────────────────────────────────────────
+// Users & dashboard
 router.get('/users', getAllUsersController);
 router.patch('/users/:id/block', toggleBlockUserController);
 router.get('/dashboard', getDashboardStatsController);
 
-// ── Farmer request review ────────────────────────────────────────────────────
-router.get('/farmer-requests', getAllFarmerRequests);
-router.get('/farmer-requests/:id', getFarmerRequestById);
-router.patch('/farmer-requests/:id/approve', approveFarmerRequest);
-router.patch('/farmer-requests/:id/reject', rejectFarmerRequest);
+// Orders
+router.get('/orders', getAllOrdersAdminController);
+router.get('/orders/:id', getOrderByIdAdminController);
+
+// Buyers
+router.get('/buyers', getAllBuyersController);
+
+// Farmer request review
+router.get('/farmer-requests', getAllFarmerRequestsController);
+router.get('/farmer-requests/:id', getFarmerRequestByIdController);
+router.patch('/farmer-requests/:id/approve', approveFarmerRequestController);
+router.patch('/farmer-requests/:id/reject', rejectFarmerRequestController);
 
 export { router as adminRoutes };

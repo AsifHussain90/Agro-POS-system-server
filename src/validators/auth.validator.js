@@ -13,10 +13,22 @@ export const registerSchema = z.object({
   fullName: z.string().trim().min(3).max(50),
   email: z.string().trim().email(),
   password: passwordSchema,
+  role: z.enum(['user', 'buyer']).optional().default('user'),
 });
 
 export const loginSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(1),
-  // role: z.enum(["user", "admin",'farmer']).optional(),
+});
+
+export const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, 'Old password is required'),
+  newPassword: passwordSchema,
+});
+
+export const superAdminRegisterSchema = z.object({
+  fullName: z.string().trim().min(3).max(50),
+  email: z.string().trim().email(),
+  password: passwordSchema,
+  secretKey: z.string().min(1, 'Secret key is required'),
 });

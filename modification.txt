@@ -1,0 +1,65 @@
+ Modified Existing Files
+
+| #  | File                                            | Why It Must Change                                                                                                                                                                            |
+| -- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | **`src/model/user.model.js`**                   | Add `buyer` & `superAdmin` to role enum; add `isActive` (Boolean, default true); add `createdBy` (ObjectId ref); update `toSafeUser` to expose `isActive`                                     |
+| 2  | **`src/model/order.model.js`**                  | Expand `deliveryDetails` subdocument to match plan (fullName, email, phone, alternatePhone, address with landmark, deliveryType, preferredDate, timeSlot, instructions)                       |
+| 3  | **`src/middlewares/auth.middleware.js`**        | Add `isSuperAdmin` role guard; add `checkActive` middleware (reject deactivated accounts with 403); update `verifyJWT` to check `isBlocked` **and** `isActive`                                |
+| 4  | **`src/routes/auth.routes.js`**                 | Add `POST /superadmin-register` (public + secret key); add `POST /change-password` (auth required); update `POST /register` to accept role auto-detection                                     |
+| 5  | **`src/Controller/auth/auth.controller.js`**    | Add `superAdminRegister` handler (validates `SUPERADMIN_SECRET_KEY`); add `changePassword` handler; update `register` to support `role: 'buyer'` vs `role: 'user'` safely                     |
+| 6  | **`src/services/auth.service.js`**              | Update `register` to accept optional `role` (restricted to `'user'` or `'buyer'` only); add `changePassword` logic; add `superAdminRegister` logic                                            |
+| 7  | **`src/routes/admin.routes.js`**                | Add `GET /buyers` (list all buyers); add `GET /orders` (all orders with delivery details); add `GET /orders/:id` (admin order detail)                                                         |
+| 8  | **`src/Controller/Admin/admin.controller.js`**  | Add `getAllBuyersController`; update `getDashboardStatsController` to include buyer counts; add `getAllOrdersAdminController` / `getOrderByIdAdminController` with populated delivery details |
+| 9  | **`src/routes/order.routes.js`**                | Add `GET /track` (public — track by email + orderId); protect `POST /` with buyer-profile check                                                                                               |
+| 10 | **`src/Controller/orders/order.controller.js`** | Add `trackOrderController` (public, no auth); update `createOrderController` to require `BuyerProfile`, auto-fill delivery from profile, decrement stock                                      |
+| 11 | **`src/routes/farmerRequest.routes.js`**        | Already corrected — admin routes removed (consolidated into `admin.routes.js`)                                                                                                                |
+| 12 | **`app.js`**                                    | Wire new routes: `superAdminRoutes`, `cartRoutes`, `buyerProfileRoutes`                                                                                                                       |
+| 13 | **`src/docs/swagger.js`**                       | Document all new endpoints, schemas (BuyerProfile, CartSession, Order deliveryDetails, superAdmin), and security rules                                                                        |
+| 14 | **`src/validators/auth.validator.js`**          | Add `changePasswordSchema` (oldPassword + newPassword); update `registerSchema` to optionally accept `role` enum                                                                              |
+| 15 | **`server.js`**                                 | No change needed (unless new env vars require validation)                                                                                                                                     |
+
+New Files Required
+Models
+| File                              | Purpose                                                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/model/buyerProfile.model.js` | Buyer delivery profile: phone, alternatePhone, cnic, savedAddresses array, deliveryPreferences, paymentPreference, businessDetails, termsAccepted |
+| `src/model/cartSession.model.js`  | Guest + logged-in cart: `userId` (nullable), `sessionId` (UUID), items array with price snapshots, `expiresAt` (TTL index)                        |
+
+Routes
+| File                                | Purpose                                                                                                                                             |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/routes/superAdmin.routes.js`   | `POST /admins`, `GET /admins`, `GET /admins/:id`, `PATCH /admins/:id/activate`, `PATCH /admins/:id/deactivate`, `DELETE /admins/:id`                |
+| `src/routes/cart.routes.js`         | `POST /`, `GET /`, `PUT /:itemId`, `DELETE /:itemId`, `DELETE /` (clear), `POST /merge`                                                             |
+| `src/routes/buyerProfile.routes.js` | `POST /profile`, `GET /profile`, `POST /addresses`, `GET /addresses`, `PUT /addresses/:id`, `DELETE /addresses/:id`, `PATCH /addresses/:id/default` |
+
+Controller
+| File                                                     | Purpose                                                                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `src/Controller/superAdmin/superAdmin.controller.js`     | Create admin (with temp password), list admins, toggle activate/deactivate, delete admin |
+| `src/Controller/cart/cart.controller.js`                 | Add item, get cart, update qty, remove item, clear cart, merge guest cart on login       |
+| `src/Controller/buyerProfile/buyerProfile.controller.js` | CRUD profile, manage saved addresses, set default address                                |
+
+services
+| File                                   | Purpose                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `src/services/superAdmin.service.js`   | Business logic for admin lifecycle, hash temp password, ensure only superAdmin creates admins |
+| `src/services/cart.service.js`         | Guest session management, merge logic, TTL handling, price snapshot validation                |
+| `src/services/buyerProfile.service.js` | Profile CRUD, address management, ensure one profile per user                                 |
+
+validator
+| File                                       | Purpose                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `src/validators/superAdmin.validator.js`   | Validate admin creation payload (fullName, email, role forced to 'admin') |
+| `src/validators/cart.validator.js`         | Validate cart item (productId, quantity), merge payload                   |
+| `src/validators/buyerProfile.validator.js` | Validate delivery address, profile fields, phone regex                    |
+
+Critical Architectural Conflicts to Resolve
+
+| Conflict                         | Current Code                   | Plan Requirement                                           | Recommended Resolution                                                                                               |
+| -------------------------------- | ------------------------------ | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Register endpoint dual-use**   | Always creates `role: 'user'`  | Same endpoint must create `buyer` OR `user`                | Accept `role` in body, validate against enum `['user','buyer']`, default to `'user'`                                 |
+| **Admin creation**               | No admin creation flow         | Only `superAdmin` creates `admin` with credentials         | New `superAdmin` service generates random temp password, admin must change on first login (or use `change-password`) |
+| **Order delivery details**       | Basic structure in Order model | Rich nested object (address, timeSlot, deliveryType, etc.) | Embed full `deliveryDetails` in Order model as shown in plan; auto-fill from `BuyerProfile` at checkout              |
+| **Guest cart → user cart merge** | No cart system exists          | On login, guest cart merges into user cart                 | Implement in `cart.service.js` merge logic: union by productId, sum quantities, keep latest price snapshot           |
+| **Deactivated admin login**      | Only checks `isBlocked`        | Must also check `isActive`                                 | Add `checkActive` middleware after `verifyJWT` on protected routes, or bake it into `verifyJWT`                      |
+| **Buyer vs User role**           | No `buyer` role exists         | Buyers are distinct from `user` (farmer candidate)         | Add `'buyer'` to enum; ensure `isUser` middleware still works for farmer requests (only `'user'` role)               |

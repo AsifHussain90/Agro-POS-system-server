@@ -13,7 +13,7 @@ import {
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
 };
 
 const setRefreshCookie = (res, refreshToken) => {
@@ -33,7 +33,6 @@ const sendResponse = (res, statusCode, message, data = null) => {
     .json(new ApiResponse(statusCode, data, message));
 };
 
-//register function is defined here
 export const createAuthController = ({
   authService = authServiceModule,
   userModel = User,
@@ -43,7 +42,6 @@ export const createAuthController = ({
   const register = asyncHandler(async (req, res) => {
     const data = await authService.register(req.body);
     setRefreshCookie(res, data.refreshToken);
-
     return sendResponse(res, 201, 'User created', {
       user: data.user,
       accessToken: data.accessToken,
@@ -53,7 +51,6 @@ export const createAuthController = ({
   const login = asyncHandler(async (req, res) => {
     const data = await authService.login(req.body);
     setRefreshCookie(res, data.refreshToken);
-
     return sendResponse(res, 200, 'Login successful', {
       user: data.user,
       accessToken: data.accessToken,
@@ -68,42 +65,38 @@ export const createAuthController = ({
 
   const logout = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.refreshToken;
-
     if (refreshToken) {
       try {
         const decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
         const user = await userModel
           .findById(decoded._id)
           .select('+refreshToken');
-
         if (user) await user.clearRefreshToken();
       } catch {
-        // ignore invalid tokens and still clear cookies
+        // ignore invalid tokens
       }
     }
-
     clearRefreshCookie(res);
     return sendResponse(res, 200, 'Logged out successfully');
   });
 
   const refreshAccessToken = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.refreshToken;
-
     if (!refreshToken) {
       return res.status(401).json({ message: 'Refresh token missing' });
     }
 
     let decoded;
-
     try {
       decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
     } catch {
+      clearRefreshCookie(res);
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
 
     const user = await userModel.findById(decoded._id).select('+refreshToken');
-
     if (!user || !(await user.isRefreshTokenValid(refreshToken))) {
+      clearRefreshCookie(res);
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
 
@@ -119,7 +112,33 @@ export const createAuthController = ({
     });
   });
 
-  return { register, login, profile, logout, refreshAccessToken };
+  const changePassword = asyncHandler(async (req, res) => {
+    await authService.changePassword({
+      userId: req.user._id,
+      oldPassword: req.body.oldPassword,
+      newPassword: req.body.newPassword,
+    });
+    return sendResponse(res, 200, 'Password changed successfully');
+  });
+
+  const superAdminRegister = asyncHandler(async (req, res) => {
+    const data = await authService.superAdminRegister(req.body);
+    setRefreshCookie(res, data.refreshToken);
+    return sendResponse(res, 201, 'superAdmin created', {
+      user: data.user,
+      accessToken: data.accessToken,
+    });
+  });
+
+  return {
+    register,
+    login,
+    profile,
+    logout,
+    refreshAccessToken,
+    changePassword,
+    superAdminRegister,
+  };
 };
 
 const authController = createAuthController();
@@ -129,3 +148,5 @@ export const login = authController.login;
 export const profile = authController.profile;
 export const logout = authController.logout;
 export const refreshAccessToken = authController.refreshAccessToken;
+export const changePassword = authController.changePassword;
+export const superAdminRegister = authController.superAdminRegister;

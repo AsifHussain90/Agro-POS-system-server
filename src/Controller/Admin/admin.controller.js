@@ -6,6 +6,11 @@ import { Product } from '../../model/product.model.js';
 import { Order } from '../../model/order.model.js';
 import { FarmerRequest } from '../../model/farmerRequest.model.js';
 
+// Sanitize regex input to prevent ReDoS and injection
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 export const getAllUsersController = asyncHandler(async (req, res) => {
   const {
     page = 1,
@@ -19,9 +24,10 @@ export const getAllUsersController = asyncHandler(async (req, res) => {
 
   if (role) query.role = role;
   if (search) {
+    const safeSearch = escapeRegex(search);
     query.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: safeSearch, $options: 'i' } },
+      { email: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 
@@ -30,7 +36,7 @@ export const getAllUsersController = asyncHandler(async (req, res) => {
 
   const [data, total] = await Promise.all([
     User.find(query)
-      .select('-password -refreshToken')
+      .select('-password -refreshToken -refreshTokenVersion')  // FIXED: exclude internal fields
       .sort(sort)
       .skip(skip)
       .limit(Number(limit)),
@@ -62,20 +68,18 @@ export const toggleBlockUserController = asyncHandler(async (req, res) => {
   user.isBlocked = !user.isBlocked;
   await user.save();
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { userId: user._id, isBlocked: user.isBlocked },
-        'User block status updated'
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { userId: user._id, isBlocked: user.isBlocked },
+      'User block status updated'
+    )
+  );
 });
 
 export const getDashboardStatsController = asyncHandler(async (req, res) => {
-  const [userStats, productStats, orderStats, requestStats] = await Promise.all(
-    [
+  const [userStats, productStats, orderStats, requestStats] =
+    await Promise.all([
       User.aggregate([
         {
           $group: {
@@ -98,8 +102,7 @@ export const getDashboardStatsController = asyncHandler(async (req, res) => {
       FarmerRequest.aggregate([
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
-    ]
-  );
+    ]);
 
   const orderMap = Object.fromEntries(orderStats.map((s) => [s._id, s.count]));
   const requestMap = Object.fromEntries(
@@ -127,7 +130,6 @@ export const getDashboardStatsController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, stats, 'Dashboard statistics retrieved'));
 });
 
-// NEW: Admin sees all orders with delivery details
 export const getAllOrdersAdminController = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, status } = req.query;
   const query = {};
@@ -146,18 +148,15 @@ export const getAllOrdersAdminController = asyncHandler(async (req, res) => {
     Order.countDocuments(query),
   ]);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { data, total, page: Number(page), limit: Number(limit) },
-        'All orders retrieved'
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { data, total, page: Number(page), limit: Number(limit) },
+      'All orders retrieved'
+    )
+  );
 });
 
-// NEW: Admin gets single order detail
 export const getOrderByIdAdminController = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate('buyer', 'fullName email')
@@ -166,18 +165,20 @@ export const getOrderByIdAdminController = asyncHandler(async (req, res) => {
 
   if (!order) throw new ApiError(404, 'Order not found');
 
-  return res.status(200).json(new ApiResponse(200, order, 'Order retrieved'));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, order, 'Order retrieved'));
 });
 
-// NEW: Admin lists all buyers
 export const getAllBuyersController = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, search } = req.query;
   const query = { role: 'buyer' };
 
   if (search) {
+    const safeSearch = escapeRegex(search);
     query.$or = [
-      { fullName: { $regex: search, $options: 'i' } },
-      { email: { $regex: search, $options: 'i' } },
+      { fullName: { $regex: safeSearch, $options: 'i' } },
+      { email: { $regex: safeSearch, $options: 'i' } },
     ];
   }
 
@@ -185,20 +186,18 @@ export const getAllBuyersController = asyncHandler(async (req, res) => {
 
   const [data, total] = await Promise.all([
     User.find(query)
-      .select('-password -refreshToken')
+      .select('-password -refreshToken -refreshTokenVersion')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
     User.countDocuments(query),
   ]);
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { data, total, page: Number(page), limit: Number(limit) },
-        'Buyers retrieved'
-      )
-    );
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { data, total, page: Number(page), limit: Number(limit) },
+      'Buyers retrieved'
+    )
+  );
 });

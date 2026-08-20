@@ -3,6 +3,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/errorHandler.js';
 import { User } from '../model/user.model.js';
 import { getAccessTokenSecret } from '../utils/tokenGenerator.js';
+import { hasPermission } from '../config/permissions.js';
 
 export const verifyJWT = asyncHandler(async (req, res, next) => {
   const header = req.headers?.authorization || req.headers?.Authorization;

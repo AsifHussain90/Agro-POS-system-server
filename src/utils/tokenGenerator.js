@@ -17,15 +17,21 @@ const getTokenSecret = (primaryName, legacyName) => {
     : 'dev-access-secret';
 };
 
-export const getAccessTokenSecret = () => getTokenSecret('ACCESS_TOKEN_SECRET');
+// FIXED: Added legacy fallback for backward compatibility
+export const getAccessTokenSecret = () =>
+  getTokenSecret('ACCESS_TOKEN_SECRET', 'SECRET_ACCESS_TOKEN');
 
 export const getRefreshTokenSecret = () =>
-  getTokenSecret('REFRESH_TOKEN_SECRET');
+  getTokenSecret('REFRESH_TOKEN_SECRET', 'SECRET_REFRESH_TOKEN');
 
-const getAccessTokenExpiry = () => process.env.ACCESS_TOKEN_EXPIRY || '15m';
+const getAccessTokenExpiry = () =>
+  process.env.ACCESS_TOKEN_EXPIRY ||
+  process.env.SECRET_ACCESS_TOKEN_EXPIRY ||
+  '15m';
 
 const getRefreshTokenExpiry = () =>
   process.env.REFRESH_TOKEN_EXPIRY ||
+  process.env.SECRET_REFRESH_TOKEN_EXPIRY ||
   '7d';
 
 const generateAccessToken = (user) => {

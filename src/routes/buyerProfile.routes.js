@@ -13,7 +13,7 @@ import {
   updateAddressController,
   deleteAddressController,
   setDefaultAddressController,
-} from '../Controller/buyerProfile/buyerProfile.controller.js';
+} from '../Controller/Buyer/buyerProfile.controller.js';
 
 const router = express.Router();
 

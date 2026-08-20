@@ -1,4 +1,5 @@
 import express from 'express';
+import { verifyJWT } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.middleware.js';
 import {
   addToCartSchema,
@@ -22,6 +23,8 @@ router.get('/', getCartController);
 router.put('/:itemId', validate(updateCartItemSchema), updateCartItemController);
 router.delete('/:itemId', removeCartItemController);
 router.delete('/', clearCartController);
-router.post('/merge', validate(mergeCartSchema), mergeCartController);
+
+// FIXED: merge requires authentication
+router.post('/merge', verifyJWT, validate(mergeCartSchema), mergeCartController);
 
 export { router as cartRoutes };

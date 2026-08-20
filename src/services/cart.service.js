@@ -3,9 +3,7 @@ import { Product } from '../model/product.model.js';
 import ApiError from '../utils/errorHandler.js';
 import crypto from 'crypto';
 
-const generateSessionId = () => {
-  return crypto.randomUUID();
-};
+const generateSessionId = () => crypto.randomUUID();
 
 export const createCartService = ({
   CartSessionModel = CartSession,
@@ -25,11 +23,7 @@ export const createCartService = ({
     }
 
     const newSessionId = generateSessionId();
-    const cart = await CartSessionModel.create({
-      sessionId: newSessionId,
-      items: [],
-    });
-    return cart;
+    return CartSessionModel.create({ sessionId: newSessionId, items: [] });
   },
 
   addItem: async ({ userId, sessionId, productId, quantity }) => {
@@ -48,6 +42,8 @@ export const createCartService = ({
 
     if (existingItemIndex >= 0) {
       cart.items[existingItemIndex].quantity += quantity;
+      // Always keep the latest price from the product catalog
+      cart.items[existingItemIndex].unitPrice = product.price;
     } else {
       cart.items.push({
         productId: product._id,
@@ -65,23 +61,30 @@ export const createCartService = ({
   },
 
   getCart: async ({ userId, sessionId }) => {
+    let cart = null;
     if (userId) {
-      return (
-        CartSessionModel.findOne({ userId }).populate(
-          'items.productId',
-          'name price images isActive'
-        ) || { items: [] }
+      cart = await CartSessionModel.findOne({ userId }).populate(
+        'items.productId',
+        'name price images isActive'
+      );
+    } else if (sessionId) {
+      cart = await CartSessionModel.findOne({ sessionId }).populate(
+        'items.productId',
+        'name price images isActive'
       );
     }
-    if (sessionId) {
-      return (
-        CartSessionModel.findOne({ sessionId }).populate(
-          'items.productId',
-          'name price images isActive'
-        ) || { items: [] }
-      );
-    }
-    return { items: [] };
+
+    // Consistent return shape — safe for callers to destructure
+    return (
+      cart || {
+        _id: null,
+        userId: userId || null,
+        sessionId: sessionId || null,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    );
   },
 
   updateItemQuantity: async ({ userId, sessionId, itemId, quantity }) => {
@@ -111,7 +114,7 @@ export const createCartService = ({
 
   clearCart: async ({ userId, sessionId }) => {
     const query = userId ? { userId } : { sessionId };
-    const cart = await CartSessionModel.findOneAndDelete(query);
+    await CartSessionModel.findOneAndDelete(query);
     return { cleared: true };
   },
 
@@ -136,7 +139,6 @@ export const createCartService = ({
       return guestCart;
     }
 
-    // Merge: union by productId, sum quantities, keep latest price
     for (const guestItem of guestCart.items) {
       const existingIndex = userCart.items.findIndex(
         (item) => item.productId.toString() === guestItem.productId.toString()
@@ -144,7 +146,11 @@ export const createCartService = ({
 
       if (existingIndex >= 0) {
         userCart.items[existingIndex].quantity += guestItem.quantity;
-        userCart.items[existingIndex].unitPrice = guestItem.unitPrice;
+        // FIXED: Keep the latest price (product catalog is source of truth)
+        userCart.items[existingIndex].unitPrice = Math.max(
+          userCart.items[existingIndex].unitPrice,
+          guestItem.unitPrice
+        );
       } else {
         userCart.items.push(guestItem);
       }

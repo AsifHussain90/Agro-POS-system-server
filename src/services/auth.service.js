@@ -1,118 +1,85 @@
-import { User } from '../model/user.model.js';
-import ApiError from '../utils/errorHandler.js';
+import asyncHandler from '../../utils/asyncHandler.js';
+import ApiResponse from '../../utils/apiResponse.js';
 import {
-  generateAccessToken,
-  generateRefreshToken,
-} from '../utils/tokenGenerator.js';
+  createFarmerRequest,
+  getMyFarmerRequests,
+  updateFarmerRequest,
+  deleteFarmerRequest,
+  getAllFarmerRequests,
+  getFarmerRequestById,
+  approveFarmerRequest,
+  rejectFarmerRequest,
+} from '../../services/farmerRequest.service.js';
 
-export const toSafeUser = (user) => ({
-  _id: user._id,
-  fullName: user.fullName,
-  email: user.email,
-  role: user.role,
-  isActive: user.isActive,
-  isBlocked: user.isBlocked,
-  avatar: user.avatar?.url
-    ? { url: user.avatar.url, publicId: user.avatar.publicId }
-    : null,
+export const createFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await createFarmerRequest(req.user._id, req.body);
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(201, request, 'Farmer account request submitted successfully')
+    );
 });
 
-const issueTokens = async (
-  user,
-  { accessTokenGenerator, refreshTokenGenerator }
-) => {
-  const accessToken = accessTokenGenerator(user);
-  const refreshToken = refreshTokenGenerator(user);
-
-  await user.setRefreshToken(refreshToken);
-
-  return {
-    user: toSafeUser(user),
-    accessToken,
-    refreshToken,
-  };
-};
-
-export const createAuthService = ({
-  UserModel = User,
-  accessTokenGenerator = generateAccessToken,
-  refreshTokenGenerator = generateRefreshToken,
-} = {}) => ({
-  register: async ({ fullName, email, password, role = 'user' }) => {
-    const normalizedEmail = email.toLowerCase();
-
-    const exists = await UserModel.findOne({ email: normalizedEmail });
-    if (exists) throw new ApiError(409, 'User already exists');
-
-    // Only allow 'user' or 'buyer' from public registration
-    const allowedRoles = ['user', 'buyer'];
-    const safeRole = allowedRoles.includes(role) ? role : 'user';
-
-    const user = await UserModel.create({
-      fullName,
-      email: normalizedEmail,
-      password,
-      role: safeRole,
-    });
-
-    return issueTokens(user, { accessTokenGenerator, refreshTokenGenerator });
-  },
-
-  login: async ({ email, password }) => {
-    const user = await UserModel.findOne({
-      email: email.toLowerCase(),
-    }).select('+password');
-
-    if (!user) throw new ApiError(401, 'Invalid email or password');
-
-    const match = await user.isPasswordCorrect(password);
-    if (!match) throw new ApiError(401, 'Invalid email or password');
-
-    if (!user.isActive) {
-      throw new ApiError(403, 'Account deactivated');
-    }
-
-    return issueTokens(user, { accessTokenGenerator, refreshTokenGenerator });
-  },
-
-  changePassword: async ({ userId, oldPassword, newPassword }) => {
-    const user = await UserModel.findById(userId).select('+password');
-    if (!user) throw new ApiError(404, 'User not found');
-
-    const match = await user.isPasswordCorrect(oldPassword);
-    if (!match) throw new ApiError(401, 'Incorrect old password');
-
-    user.password = newPassword;
-    user.changePassword = false;
-    await user.save();
-
-    return { success: true };
-  },
-
-  superAdminRegister: async ({ fullName, email, password, secretKey }) => {
-    const expectedKey = process.env.SUPERADMIN_SECRET_KEY;
-    if (!expectedKey || secretKey !== expectedKey) {
-      throw new ApiError(403, 'Invalid secret key');
-    }
-
-    const normalizedEmail = email.toLowerCase();
-    const exists = await UserModel.findOne({ email: normalizedEmail });
-    if (exists) throw new ApiError(409, 'User already exists');
-
-    const user = await UserModel.create({
-      fullName,
-      email: normalizedEmail,
-      password,
-      role: 'superAdmin',
-    });
-
-    return issueTokens(user, { accessTokenGenerator, refreshTokenGenerator });
-  },
+export const getMyFarmerRequestsController = asyncHandler(async (req, res) => {
+  const requests = await getMyFarmerRequests(req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
 });
 
-const authService = createAuthService();
+export const updateFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await updateFarmerRequest(
+    req.user._id,
+    req.params.id,
+    req.body
+  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request updated'));
+});
 
-export const register = authService.register;
-export const login = authService.login;
-export const changePassword = authService.changePassword;
-export const superAdminRegister = authService.superAdminRegister;
+export const deleteFarmerRequestController = asyncHandler(async (req, res) => {
+  const result = await deleteFarmerRequest(req.user._id, req.params.id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, 'Farmer request deleted'));
+});
+
+// FIXED: Pass pagination params from req.query to service
+export const getAllFarmerRequestsController = asyncHandler(async (req, res) => {
+  const { page, limit } = req.query;
+  const requests = await getAllFarmerRequests({
+    page: page ? Number(page) : 1,
+    limit: limit ? Number(limit) : 10,
+  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
+});
+
+export const getFarmerRequestByIdController = asyncHandler(async (req, res) => {
+  const request = await getFarmerRequestById(req.params.id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request retrieved'));
+});
+
+export const approveFarmerRequestController = asyncHandler(async (req, res) => {
+  const result = await approveFarmerRequest(req.params.id, {
+    reviewedBy: req.user._id,
+    reviewMessage: req.body.reviewMessage,
+  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, 'Farmer request approved'));
+});
+
+export const rejectFarmerRequestController = asyncHandler(async (req, res) => {
+  const request = await rejectFarmerRequest(req.params.id, {
+    reviewedBy: req.user._id,
+    reviewMessage: req.body.reviewMessage,
+  });
+  return res
+    .status(200)
+    .json(new ApiResponse(200, request, 'Farmer request rejected'));
+});

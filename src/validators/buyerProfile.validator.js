@@ -1,5 +1,5 @@
 import { z } from 'zod';
-
+// FIXED: separate schema for creation — terms required
 export const createBuyerProfileSchema = z.object({
   phone: z.string().trim().min(1, 'Phone is required'),
   alternatePhone: z.string().trim().optional().nullable(),
@@ -31,6 +31,30 @@ export const createBuyerProfileSchema = z.object({
   }),
 });
 
+// FIXED: separate schema for updates — no required terms
+export const updateBuyerProfileSchema = z.object({
+  phone: z.string().trim().min(1).optional(),
+  alternatePhone: z.string().trim().optional().nullable(),
+  cnic: z.string().trim().optional().nullable(),
+  deliveryPreferences: z
+    .object({
+      type: z.enum(['home_delivery', 'farm_pickup']).optional(),
+      timeSlot: z.enum(['morning', 'afternoon', 'evening']).optional(),
+      instructions: z.string().trim().optional(),
+    })
+    .optional(),
+  paymentPreference: z
+    .enum(['cash_on_delivery', 'bank_transfer', 'jazzcash', 'easypaisa'])
+    .optional(),
+  businessDetails: z
+    .object({
+      name: z.string().trim().optional(),
+      type: z.enum(['restaurant', 'retail', 'processing', 'other']).optional(),
+      ntn: z.string().trim().optional(),
+    })
+    .optional(),
+});
+// Address schema for buyer profile
 export const addressSchema = z.object({
   fullName: z.string().trim().min(1).optional(),
   street: z.string().trim().min(1),

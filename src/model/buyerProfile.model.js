@@ -90,19 +90,23 @@ const buyerProfileSchema = new Schema(
       enum: ['cash_on_delivery', 'bank_transfer', 'jazzcash', 'easypaisa'],
       default: 'cash_on_delivery',
     },
+    // FIXED: Added _id: false to prevent unnecessary subdocument IDs
     businessDetails: {
-      name: {
-        type: String,
-        trim: true,
-      },
       type: {
-        type: String,
-        enum: ['restaurant', 'retail', 'processing', 'other'],
+        name: {
+          type: String,
+          trim: true,
+        },
+        type: {
+          type: String,
+          enum: ['restaurant', 'retail', 'processing', 'other'],
+        },
+        ntn: {
+          type: String,
+          trim: true,
+        },
       },
-      ntn: {
-        type: String,
-        trim: true,
-      },
+      _id: false,
     },
     termsAccepted: {
       type: Boolean,

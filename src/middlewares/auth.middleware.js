@@ -3,34 +3,37 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/errorHandler.js';
 import { User } from '../model/user.model.js';
 import { getAccessTokenSecret } from '../utils/tokenGenerator.js';
-import { hasPermission } from '../config/permissions.js';
+import { hasPermission } from '../config/permission.js';
 
 export const verifyJWT = asyncHandler(async (req, res, next) => {
   const header = req.headers?.authorization || req.headers?.Authorization;
 
   if (!header) {
-    throw new ApiError(401, 'Unauthorized');
+    throw new ApiError(401, 'Unauthorized — missing authorization header');
   }
 
   const [scheme, token] = header.split(' ');
 
   if (scheme?.toLowerCase() !== 'bearer' || !token) {
-    throw new ApiError(401, 'Unauthorized');
+    throw new ApiError(401, 'Unauthorized — invalid token format');
   }
 
   let decoded;
   try {
     decoded = jwt.verify(token, getAccessTokenSecret());
-  } catch {
-    throw new ApiError(401, 'Unauthorized');
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      throw new ApiError(401, 'Token expired');
+    }
+    throw new ApiError(401, 'Invalid token');
   }
 
   req.user = await User.findById(decoded._id).select(
-    '-password -refreshToken'
+    '-password -refreshToken -refreshTokenVersion'
   );
 
   if (!req.user) {
-    throw new ApiError(401, 'Unauthorized');
+    throw new ApiError(401, 'Unauthorized — user no longer exists');
   }
 
   if (!req.user.isActive) {
@@ -57,14 +60,13 @@ const checkRole = (role) =>
       throw new ApiError(401, 'Unauthorized');
     }
     if (req.user.role !== role) {
-      throw new ApiError(403, 'Forbidden');
+      throw new ApiError(403, `Forbidden — requires ${role} role`);
     }
     next();
   });
 
 export const isAdmin = checkRole('admin');
 export const isFarmer = checkRole('farmer');
-export const isUser = checkRole('user');
 export const isBuyer = checkRole('buyer');
 export const isSuperAdmin = checkRole('superAdmin');
 
@@ -73,9 +75,8 @@ export const requirePermission = (permission) =>
     if (!req.user) {
       throw new ApiError(401, 'Unauthorized');
     }
-    const { hasPermission } = await import('../config/permissions.js');
     if (!hasPermission(req.user.role, permission)) {
-      throw new ApiError(403, 'Forbidden');
+      throw new ApiError(403, `Forbidden — missing permission: ${permission}`);
     }
     next();
   });

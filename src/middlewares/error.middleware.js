@@ -12,7 +12,7 @@ export const errorHandler = (err, req, res, next) => {
     message = 'Validation failed';
     errors = Object.values(err.errors).map((e) => ({
       field: e.path,
-      message: e.message,
+      message: e.message, 
     }));
   }
 

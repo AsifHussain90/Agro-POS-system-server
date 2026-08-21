@@ -3,38 +3,24 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const getTokenSecret = (primaryName, legacyName) => {
-  const secret = process.env[primaryName] || process.env[legacyName];
-
-  if (secret) return secret;
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(`Missing ${primaryName} environment variable`);
+const requireEnv = (name) => {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
   }
-
-  return primaryName.includes('REFRESH')
-    ? 'dev-refresh-secret'
-    : 'dev-access-secret';
+  return value;
 };
 
-// FIXED: Added legacy fallback for backward compatibility
-export const getAccessTokenSecret = () =>
-  getTokenSecret('ACCESS_TOKEN_SECRET', 'SECRET_ACCESS_TOKEN');
-
-export const getRefreshTokenSecret = () =>
-  getTokenSecret('REFRESH_TOKEN_SECRET', 'SECRET_REFRESH_TOKEN');
+export const getAccessTokenSecret = () => requireEnv('ACCESS_TOKEN_SECRET');
+export const getRefreshTokenSecret = () => requireEnv('REFRESH_TOKEN_SECRET');
 
 const getAccessTokenExpiry = () =>
-  process.env.ACCESS_TOKEN_EXPIRY ||
-  process.env.SECRET_ACCESS_TOKEN_EXPIRY ||
-  '15m';
+  process.env.ACCESS_TOKEN_EXPIRY || '15m';
 
 const getRefreshTokenExpiry = () =>
-  process.env.REFRESH_TOKEN_EXPIRY ||
-  process.env.SECRET_REFRESH_TOKEN_EXPIRY ||
-  '7d';
+  process.env.REFRESH_TOKEN_EXPIRY || '7d';
 
-const generateAccessToken = (user) => {
+export const generateAccessToken = (user) => {
   return jwt.sign(
     {
       _id: user._id,
@@ -47,10 +33,8 @@ const generateAccessToken = (user) => {
   );
 };
 
-const generateRefreshToken = (user) => {
+export const generateRefreshToken = (user) => {
   return jwt.sign({ _id: user._id }, getRefreshTokenSecret(), {
     expiresIn: getRefreshTokenExpiry(),
   });
 };
-
-export { generateAccessToken, generateRefreshToken };

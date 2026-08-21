@@ -67,8 +67,6 @@ const cartSessionSchema = new Schema(
 
 // TTL index: auto-delete expired carts
 cartSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-// Unique constraints (sparse allows null duplicates)
-cartSessionSchema.index({ userId: 1 }, { unique: true, sparse: true });
-cartSessionSchema.index({ sessionId: 1 }, { unique: true, sparse: true });
+
 
 export const CartSession = mongoose.model('CartSession', cartSessionSchema);

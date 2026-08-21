@@ -40,6 +40,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     throw new ApiError(403, 'Account deactivated');
   }
 
+
   if (req.user.isBlocked) {
     throw new ApiError(403, 'User is blocked');
   }
@@ -68,6 +69,7 @@ const checkRole = (role) =>
 export const isAdmin = checkRole('admin');
 export const isFarmer = checkRole('farmer');
 export const isBuyer = checkRole('buyer');
+export const isUser = checkRole('user');
 export const isSuperAdmin = checkRole('superAdmin');
 
 export const requirePermission = (permission) =>

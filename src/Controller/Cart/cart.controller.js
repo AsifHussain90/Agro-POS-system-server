@@ -2,10 +2,10 @@ import asyncHandler from '../../utils/asyncHandler.js';
 import ApiResponse from '../../utils/apiResponse.js';
 import {
   addItem,
-  getCart,
+  getCart as getCartService,
   updateItemQuantity,
   removeItem,
-  clearCart,
+  clearCart as clearCartService,
   mergeGuestCart,
 } from '../../services/cart.service.js';
 
@@ -32,7 +32,8 @@ const clearSessionCookie = (res) => {
   });
 };
 
-export const addToCartController = asyncHandler(async (req, res) => {
+// POST /api/cart
+export const addToCart = asyncHandler(async (req, res) => {
   const userId = req.user?._id || null;
   const sessionId = getSessionId(req);
 
@@ -52,17 +53,19 @@ export const addToCartController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, cart, 'Item added to cart'));
 });
 
-export const getCartController = asyncHandler(async (req, res) => {
+// GET /api/cart
+export const getCart = asyncHandler(async (req, res) => {
   const userId = req.user?._id || null;
   const sessionId = getSessionId(req);
 
-  const cart = await getCart({ userId, sessionId });
+  const cart = await getCartService({ userId, sessionId });
   return res
     .status(200)
     .json(new ApiResponse(200, cart, 'Cart retrieved'));
 });
 
-export const updateCartItemController = asyncHandler(async (req, res) => {
+// PUT /api/cart/:itemId
+export const updateCartItem = asyncHandler(async (req, res) => {
   const userId = req.user?._id || null;
   const sessionId = getSessionId(req);
 
@@ -78,7 +81,8 @@ export const updateCartItemController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, cart, 'Cart item updated'));
 });
 
-export const removeCartItemController = asyncHandler(async (req, res) => {
+// DELETE /api/cart/:itemId
+export const removeCartItem = asyncHandler(async (req, res) => {
   const userId = req.user?._id || null;
   const sessionId = getSessionId(req);
 
@@ -93,11 +97,12 @@ export const removeCartItemController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, cart, 'Item removed from cart'));
 });
 
-export const clearCartController = asyncHandler(async (req, res) => {
+// DELETE /api/cart
+export const clearCart = asyncHandler(async (req, res) => {
   const userId = req.user?._id || null;
   const sessionId = getSessionId(req);
 
-  await clearCart({ userId, sessionId });
+  await clearCartService({ userId, sessionId });
   clearSessionCookie(res);
 
   return res
@@ -105,7 +110,8 @@ export const clearCartController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, null, 'Cart cleared'));
 });
 
-export const mergeCartController = asyncHandler(async (req, res) => {
+// POST /api/cart/merge
+export const mergeCart = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { sessionId } = req.body;
 

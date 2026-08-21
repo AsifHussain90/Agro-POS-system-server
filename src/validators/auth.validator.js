@@ -13,7 +13,7 @@ export const registerSchema = z.object({
   fullName: z.string().trim().min(3).max(50),
   email: z.string().trim().email(),
   password: passwordSchema,
-  role: z.enum(['user', 'buyer']).optional().default('user'),
+  role: z.enum(['user', 'farmer', 'buyer']).optional().default('user'),
 });
 
 export const loginSchema = z.object({

@@ -4,6 +4,7 @@ import {
   createProduct,
   getAllProducts,
   getProductById,
+  getFarmerProducts,
   updateProduct,
   deleteProduct,
 } from '../../services/product.service.js';
@@ -34,7 +35,7 @@ export const getProductByIdController = asyncHandler(async (req, res) => {
 
 // GET /api/products/my-products
 export const getMyProductsController = asyncHandler(async (req, res) => {
-  const products = await getMyProducts(req.user._id);
+  const products = await getFarmerProducts(req.user._id);
   return res
     .status(200)
     .json(new ApiResponse(200, products, 'My products retrieved successfully'));

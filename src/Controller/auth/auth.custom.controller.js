@@ -30,12 +30,12 @@ const issueTokens = async (user, res) => {
 
 export const registerVisitor = asyncHandler(async (req, res) => {
   const { fullName, password } = req.body;
-  const normalizedEmail = req.body.email.toLowerCase().trim();
-  
+  const normalizedEmail = req.body.email?.toLowerCase().trim();
+
   if (!fullName || !normalizedEmail || !password) {
     throw new ApiError(400, 'fullName, email, and password are required');
   }
-  
+
   const existingUser = await User.findOne({ email: normalizedEmail });
 
   if (existingUser) {
@@ -43,12 +43,13 @@ export const registerVisitor = asyncHandler(async (req, res) => {
   }
 
   const user = await User.create({
-    fullName: req.body.fullName.trim(),   // ← Only allowed fields
+    fullName: fullName.trim(),
     email: normalizedEmail,
-    password: req.body.password,
+    password: password,
     role: 'visitor',
     changePassword: false,
-});
+  });
+
   const tokens = await issueTokens(user, res);
 
   return res.status(201).json(
@@ -56,7 +57,7 @@ export const registerVisitor = asyncHandler(async (req, res) => {
       201,
       {
         user: {
-          id: user._id,
+          _id: user._id,
           fullName: user.fullName,
           email: user.email,
           role: user.role,
@@ -64,17 +65,12 @@ export const registerVisitor = asyncHandler(async (req, res) => {
         },
         accessToken: tokens.accessToken,
       },
-      'user registered successfully'
+      'User registered successfully'
     )
   );
 });
 
 export const loginVisitor = asyncHandler(async (req, res) => {
-
-  if (user.role !== 'visitor') {
-    throw new ApiError(403, 'Please use the standard login endpoint');
-}
-
   if (!req.body.email || !req.body.password) {
     throw new ApiError(400, 'Email and password are required');
   }
@@ -85,6 +81,10 @@ export const loginVisitor = asyncHandler(async (req, res) => {
 
   if (!user) {
     throw new ApiError(401, 'Invalid email or password');
+  }
+
+  if (user.role !== 'visitor') {
+    throw new ApiError(403, 'Please use the standard login endpoint');
   }
 
   const isPasswordCorrect = await user.isPasswordCorrect(req.body.password);
@@ -99,7 +99,7 @@ export const loginVisitor = asyncHandler(async (req, res) => {
       data: {
         changePassword: true,
         user: {
-          id: user._id,
+          _id: user._id,
           fullName: user.fullName,
           email: user.email,
           role: user.role,
@@ -115,7 +115,7 @@ export const loginVisitor = asyncHandler(async (req, res) => {
       200,
       {
         user: {
-          id: user._id,
+          _id: user._id,
           fullName: user.fullName,
           email: user.email,
           role: user.role,

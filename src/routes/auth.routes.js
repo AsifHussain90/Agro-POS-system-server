@@ -17,6 +17,11 @@ import {
   changePassword,
   superAdminRegister,
 } from '../Controller/auth/auth.controller.js';
+import {
+  registerVisitor,
+  loginVisitor,
+  changePasswordVisitor,
+} from '../Controller/auth/auth.custom.controller.js';
 
 const router = express.Router();
 
@@ -38,6 +43,7 @@ const loginLimiter = rateLimit({
   message: { message: 'Too many login attempts, please try again later.' },
 });
 
+// ── Standard auth ──────────────────────────────────────────────────────────
 router.post('/register', registerLimiter, validate(registerSchema), register);
 router.post('/signup', registerLimiter, validate(registerSchema), register);
 router.post('/superadmin-register', registerLimiter, validate(superAdminRegisterSchema), superAdminRegister);
@@ -46,5 +52,10 @@ router.get('/profile', verifyJWT, profile);
 router.post('/change-password', verifyJWT, validate(changePasswordSchema), changePassword);
 router.post('/logout', logout);
 router.post('/refresh-token', refreshAccessToken);
+
+// ── Visitor auth ───────────────────────────────────────────────────────────
+router.post('/visitor/register', registerLimiter, registerVisitor);
+router.post('/visitor/login', loginLimiter, loginVisitor);
+router.post('/visitor/change-password', verifyJWT, changePasswordVisitor);
 
 export { router as authRoutes };

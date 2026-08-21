@@ -7,13 +7,14 @@ import {
   mergeCartSchema,
 } from '../validators/cart.validator.js';
 import {
-  addToCartController,
-  getCartController,
-  updateCartItemController,
-  removeCartItemController,
-  clearCartController,
-  mergeCartController,
-} from '../Controller/cart/cart.controller.js';
+  addToCart as addToCartController, 
+  getCart as getCartController,
+  updateCartItem as updateCartItemController,
+  removeCartItem as removeCartItemController,
+  clearCart as clearCartController,
+  mergeCart as mergeCartController,
+   
+} from '../Controller/Cart/cart.controller.js';
 
 const router = express.Router();
 

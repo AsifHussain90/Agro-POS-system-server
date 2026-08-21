@@ -20,6 +20,10 @@ export const toSafeUser = (user) => ({
 export const register = async (payload) => {
   const { fullName, email, password, role = 'user' } = payload;
 
+  if (!fullName || !email || !password) {
+    throw new ApiError(400, 'fullName, email, and password are required');
+  }
+
   const existing = await User.findOne({ email: email.toLowerCase().trim() });
   if (existing) {
     throw new ApiError(409, 'Email already registered');
@@ -40,7 +44,14 @@ export const register = async (payload) => {
 };
 
 export const login = async (payload) => {
+
+
   const { email, password } = payload;
+
+ 
+  if (!email || !password) {
+    throw new ApiError(400, 'Email and password are required');
+  }
 
   const user = await User.findOne({
     email: email.toLowerCase().trim(),

@@ -52,57 +52,45 @@ export const createOrderController = asyncHandler(async (req, res) => {
   let order;
 
   try {
-    // 1. Validate products and atomically decrement stock
     const orderItems = [];
     let totalAmount = 0;
     let farmerId = null;
 
     for (const item of products) {
-      const product = await Product.findById(item.productId)
-        .session(session)
-        .populate('farmer');
-
-      if (!product) {
-        throw new ApiError(404, `Product ${item.productId} not found`);
-      }
-      if (!product.isActive) {
-        throw new ApiError(400, `Product "${product.name}" is not available`);
-      }
-
-      // Atomic stock decrement with $inc + $gte condition
+      // Atomic stock decrement — single query, no stale read
       const updatedProduct = await Product.findOneAndUpdate(
         {
           _id: item.productId,
+          isActive: true,
           quantity: { $gte: item.quantity },
         },
         { $inc: { quantity: -item.quantity } },
         { new: true, session }
-      );
+      ).populate('farmer');
 
       if (!updatedProduct) {
-        throw new ApiError(
-          400,
-          `Insufficient stock for "${product.name}". Available: ${product.quantity}, Requested: ${item.quantity}`
-        );
+        // Fetch product for error message only on failure
+        const product = await Product.findById(item.productId).session(session).lean();
+        const msg = product
+          ? `Insufficient stock for "${product.name}". Available: ${product.quantity}, Requested: ${item.quantity}`
+          : `Product ${item.productId} not found or unavailable`;
+        throw new ApiError(400, msg);
       }
 
-      if (!farmerId) farmerId = product.farmer._id;
-
-      else if (farmerId.toString() !== product.farmer._id.toString()) {
+      if (!farmerId) farmerId = updatedProduct.farmer._id;
+      else if (farmerId.toString() !== updatedProduct.farmer._id.toString()) {
         throw new ApiError(400, 'All products must be from the same farmer');
       }
-      
 
       orderItems.push({
-        product: product._id,
+        product: updatedProduct._id,
         quantity: item.quantity,
-        price: product.price,
+        price: updatedProduct.price,
       });
 
-      totalAmount += product.price * item.quantity;
+      totalAmount += updatedProduct.price * item.quantity;
     }
 
-    // 2. Build delivery snapshot from profile
     const deliveryDetails = {
       fullName: req.user.fullName,
       email: req.user.email,
@@ -122,7 +110,6 @@ export const createOrderController = asyncHandler(async (req, res) => {
       instructions: buyerProfile.deliveryPreferences?.instructions || '',
     };
 
-    // 3. Create order inside transaction
     [order] = await Order.create(
       [
         {
@@ -137,7 +124,6 @@ export const createOrderController = asyncHandler(async (req, res) => {
       { session }
     );
 
-    // 4. Clear cart inside transaction
     await CartSession.findOneAndDelete({ userId: buyerId }).session(session);
 
     await session.commitTransaction();
@@ -148,7 +134,6 @@ export const createOrderController = asyncHandler(async (req, res) => {
     session.endSession();
   }
 
-  // Populate after transaction (outside session — read-only)
   const populatedOrder = await Order.findById(order._id)
     .populate('buyer', 'fullName email')
     .populate('farmer', 'farmName userId')
@@ -192,25 +177,23 @@ export const getFarmerOrdersController = asyncHandler(async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/orders/:id
-// Auth check BEFORE populate to avoid wasted queries.
 // ─────────────────────────────────────────────────────────────────────────────
 export const getOrderByIdController = asyncHandler(async (req, res) => {
-  const orderLean = await Order.findById(req.params.id).lean();
-  if (!orderLean) throw new ApiError(404, 'Order not found');
-
-  const farmer = await Farmer.findOne({ userId: req.user._id }).lean();
-  const isBuyer = orderLean.buyer.toString() === req.user._id.toString();
-  const isFarmer =
-    farmer && orderLean.farmer.toString() === farmer._id.toString();
-
-  if (!isBuyer && !isFarmer && req.user.role !== 'admin' && req.user.role !== 'superAdmin') {
-    throw new ApiError(403, 'Forbidden');
-  }
-
   const order = await Order.findById(req.params.id)
     .populate('buyer', 'fullName email')
     .populate('farmer', 'farmName userId')
     .populate('products.product', 'name price category images');
+
+  if (!order) throw new ApiError(404, 'Order not found');
+
+  const farmer = await Farmer.findOne({ userId: req.user._id }).lean();
+  const isBuyer = order.buyer._id.toString() === req.user._id.toString();
+  const isFarmer =
+    farmer && order.farmer._id.toString() === farmer._id.toString();
+
+  if (!isBuyer && !isFarmer && req.user.role !== 'admin' && req.user.role !== 'superAdmin') {
+    throw new ApiError(403, 'Forbidden');
+  }
 
   return res
     .status(200)
@@ -218,42 +201,39 @@ export const getOrderByIdController = asyncHandler(async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/orders/:id/status
+// PATCH /api/orders/:id/status — ATOMIC update with status guard
 // ─────────────────────────────────────────────────────────────────────────────
 export const updateOrderStatusController = asyncHandler(async (req, res) => {
   const { status } = req.body;
 
-  const order = await Order.findById(req.params.id);
-  if (!order) throw new ApiError(404, 'Order not found');
-
-  const farmer = await Farmer.findOne({ userId: req.user._id });
-  const isFarmer = farmer && order.farmer.toString() === farmer._id.toString();
+  const farmer = await Farmer.findOne({ userId: req.user._id }).lean();
   const isAdmin = req.user.role === 'admin' || req.user.role === 'superAdmin';
 
-  if (!isFarmer && !isAdmin) {
-    throw new ApiError(403, 'Forbidden');
+  const updateQuery = { status: 'pending' };
+  if (!isAdmin && farmer) {
+    updateQuery.farmer = farmer._id;
   }
 
-  if (order.status !== 'pending') {
-    throw new ApiError(400, `Cannot update order that is already ${order.status}`);
-  }
-
-  order.status = status;
-  await order.save();
-
-  const populatedOrder = await Order.findById(order._id)
+  const order = await Order.findOneAndUpdate(
+    { _id: req.params.id, ...updateQuery },
+    { status },
+    { new: true }
+  )
     .populate('buyer', 'fullName email')
     .populate('farmer', 'farmName')
     .populate('products.product', 'name price category images');
 
+  if (!order) {
+    throw new ApiError(404, 'Order not found or cannot be updated');
+  }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, populatedOrder, 'Order status updated'));
+    .json(new ApiResponse(200, order, 'Order status updated'));
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/orders/track?email=&orderId=
-// Public tracking with minimal data exposure.
 // ─────────────────────────────────────────────────────────────────────────────
 export const trackOrderController = asyncHandler(async (req, res) => {
   const { email, orderId } = req.query;
@@ -278,21 +258,15 @@ export const trackOrderController = asyncHandler(async (req, res) => {
     status: order.status,
     totalAmount: order.totalAmount,
     createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-    products: order.products.map((item) => ({
-      name: item.product.name,
-      quantity: item.quantity,
-      price: item.price,
+    deliveryDetails: order.deliveryDetails,
+    products: order.products.map((p) => ({
+      name: p.product.name,
+      quantity: p.quantity,
+      price: p.price,
     })),
-    farmerName: order.farmer?.farmName || 'Unknown',
-    deliveryDetails: {
-      deliveryType: order.deliveryDetails?.deliveryType,
-      timeSlot: order.deliveryDetails?.timeSlot,
-      preferredDate: order.deliveryDetails?.preferredDate,
-    },
   };
 
   return res
     .status(200)
-    .json(new ApiResponse(200, trackingInfo, 'Order tracked successfully'));
+    .json(new ApiResponse(200, trackingInfo, 'Tracking info retrieved'));
 });

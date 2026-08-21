@@ -1,7 +1,6 @@
 import asyncHandler from '../../utils/asyncHandler.js';
 import jwt from 'jsonwebtoken';
-import * as authServiceModule from '../../services/auth.service.js';
-import { toSafeUser } from '../../services/auth.service.js';
+import * as authService from '../../services/auth.service.js';
 import ApiResponse from '../../utils/apiResponse.js';
 import { User } from '../../model/user.model.js';
 import {
@@ -33,120 +32,91 @@ const sendResponse = (res, statusCode, message, data = null) => {
     .json(new ApiResponse(statusCode, data, message));
 };
 
-export const createAuthController = ({
-  authService = authServiceModule,
-  userModel = User,
-  accessTokenGenerator = generateAccessToken,
-  refreshTokenGenerator = generateRefreshToken,
-} = {}) => {
-  const register = asyncHandler(async (req, res) => {
-    const data = await authService.register(req.body);
-    setRefreshCookie(res, data.refreshToken);
-    return sendResponse(res, 201, 'User created', {
-      user: data.user,
-      accessToken: data.accessToken,
-    });
+export const register = asyncHandler(async (req, res) => {
+  const data = await authService.register(req.body);
+  setRefreshCookie(res, data.refreshToken);
+  return sendResponse(res, 201, 'User created successfully', {
+    user: data.user,
+    accessToken: data.accessToken,
   });
+});
 
-  const login = asyncHandler(async (req, res) => {
-    const data = await authService.login(req.body);
-    setRefreshCookie(res, data.refreshToken);
-    return sendResponse(res, 200, 'Login successful', {
-      user: data.user,
-      accessToken: data.accessToken,
-    });
+export const login = asyncHandler(async (req, res) => {
+  const data = await authService.login(req.body);
+  setRefreshCookie(res, data.refreshToken);
+  return sendResponse(res, 200, 'Login successful', {
+    user: data.user,
+    accessToken: data.accessToken,
   });
+});
 
-  const profile = asyncHandler(async (req, res) => {
-    return sendResponse(res, 200, 'Profile fetched successfully', {
-      user: req.user,
-    });
+export const profile = asyncHandler(async (req, res) => {
+  return sendResponse(res, 200, 'Profile fetched successfully', {
+    user: req.user,
   });
+});
 
-  const logout = asyncHandler(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken;
-    if (refreshToken) {
-      try {
-        const decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
-        const user = await userModel
-          .findById(decoded._id)
-          .select('+refreshToken');
-        if (user) await user.clearRefreshToken();
-      } catch {
-        // ignore invalid tokens
-      }
-    }
-    clearRefreshCookie(res);
-    return sendResponse(res, 200, 'Logged out successfully');
-  });
-
-  const refreshAccessToken = asyncHandler(async (req, res) => {
-    const refreshToken = req.cookies?.refreshToken;
-    if (!refreshToken) {
-      return res.status(401).json({ message: 'Refresh token missing' });
-    }
-
-    let decoded;
+export const logout = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  if (refreshToken) {
     try {
-      decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
+      const decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
+      const user = await User.findById(decoded._id).select('+refreshToken');
+      if (user) await user.clearRefreshToken();
     } catch {
-      clearRefreshCookie(res);
-      return res.status(401).json({ message: 'Invalid refresh token' });
+      // ignore invalid tokens
     }
+  }
+  clearRefreshCookie(res);
+  return sendResponse(res, 200, 'Logged out successfully');
+});
 
-    const user = await userModel.findById(decoded._id).select('+refreshToken');
-    if (!user || !(await user.isRefreshTokenValid(refreshToken))) {
-      clearRefreshCookie(res);
-      return res.status(401).json({ message: 'Invalid refresh token' });
-    }
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  if (!refreshToken) {
+    return res.status(401).json({ success: false, message: 'Refresh token missing' });
+  }
 
-    const newAccessToken = accessTokenGenerator(user);
-    const newRefreshToken = refreshTokenGenerator(user);
+  let decoded;
+  try {
+    decoded = jwt.verify(refreshToken, getRefreshTokenSecret());
+  } catch {
+    clearRefreshCookie(res);
+    return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+  }
 
-    await user.setRefreshToken(newRefreshToken);
-    setRefreshCookie(res, newRefreshToken);
+  const user = await User.findById(decoded._id).select('+refreshToken');
+  if (!user || !(await user.isRefreshTokenValid(refreshToken))) {
+    clearRefreshCookie(res);
+    return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+  }
 
-    return sendResponse(res, 200, 'Token refreshed', {
-      accessToken: newAccessToken,
-      user: toSafeUser(user),
-    });
+  const newAccessToken = generateAccessToken(user);
+  const newRefreshToken = generateRefreshToken(user);
+
+  await user.setRefreshToken(newRefreshToken);
+  setRefreshCookie(res, newRefreshToken);
+
+  return sendResponse(res, 200, 'Token refreshed', {
+    accessToken: newAccessToken,
+    user: authService.toSafeUser(user),
   });
+});
 
-  const changePassword = asyncHandler(async (req, res) => {
-    await authService.changePassword({
-      userId: req.user._id,
-      oldPassword: req.body.oldPassword,
-      newPassword: req.body.newPassword,
-    });
-    return sendResponse(res, 200, 'Password changed successfully');
+export const changePassword = asyncHandler(async (req, res) => {
+  await authService.changePassword({
+    userId: req.user._id,
+    oldPassword: req.body.oldPassword,
+    newPassword: req.body.newPassword,
   });
+  return sendResponse(res, 200, 'Password changed successfully');
+});
 
-  const superAdminRegister = asyncHandler(async (req, res) => {
-    const data = await authService.superAdminRegister(req.body);
-    setRefreshCookie(res, data.refreshToken);
-    return sendResponse(res, 201, 'superAdmin created', {
-      user: data.user,
-      accessToken: data.accessToken,
-    });
+export const superAdminRegister = asyncHandler(async (req, res) => {
+  const data = await authService.superAdminRegister(req.body);
+  setRefreshCookie(res, data.refreshToken);
+  return sendResponse(res, 201, 'SuperAdmin created successfully', {
+    user: data.user,
+    accessToken: data.accessToken,
   });
-
-  return {
-    register,
-    login,
-    profile,
-    logout,
-    refreshAccessToken,
-    changePassword,
-    superAdminRegister,
-  };
-};
-
-const authController = createAuthController();
-
-export const register = authController.register;
-export const login = authController.login;
-export const profile = authController.profile;
-export const logout = authController.logout;
-export const refreshAccessToken = authController.refreshAccessToken;
-export const changePassword = authController.changePassword;
-export const superAdminRegister = authController.superAdminRegister;
+});

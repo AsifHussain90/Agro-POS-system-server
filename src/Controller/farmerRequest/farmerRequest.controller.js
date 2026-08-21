@@ -1,5 +1,6 @@
 import asyncHandler from '../../utils/asyncHandler.js';
 import ApiResponse from '../../utils/apiResponse.js';
+import ApiError from '../../utils/errorHandler.js';
 import {
   createFarmerRequest,
   getMyFarmerRequests,
@@ -11,17 +12,15 @@ import {
   rejectFarmerRequest,
 } from '../../services/farmerRequest.service.js';
 
-// POST /api/farmer-request
+// ── Buyer: Create ──────────────────────────────────────────────────────────
 export const createFarmerRequestController = asyncHandler(async (req, res) => {
   const request = await createFarmerRequest(req.user._id, req.body);
   return res
     .status(201)
-    .json(
-      new ApiResponse(201, request, 'Farmer account request submitted successfully')
-    );
+    .json(new ApiResponse(201, request, 'Farmer account request submitted successfully'));
 });
 
-// GET /api/farmer-request/my
+// ── Buyer: Get my requests ─────────────────────────────────────────────────
 export const getMyFarmerRequestsController = asyncHandler(async (req, res) => {
   const requests = await getMyFarmerRequests(req.user._id);
   return res
@@ -29,19 +28,15 @@ export const getMyFarmerRequestsController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
 });
 
-// PUT /api/farmer-request/:id
+// ── Buyer: Update ──────────────────────────────────────────────────────────
 export const updateFarmerRequestController = asyncHandler(async (req, res) => {
-  const request = await updateFarmerRequest(
-    req.user._id,
-    req.params.id,
-    req.body
-  );
+  const request = await updateFarmerRequest(req.user._id, req.params.id, req.body);
   return res
     .status(200)
     .json(new ApiResponse(200, request, 'Farmer request updated'));
 });
 
-// DELETE /api/farmer-request/:id
+// ── Buyer: Delete ──────────────────────────────────────────────────────────
 export const deleteFarmerRequestController = asyncHandler(async (req, res) => {
   const result = await deleteFarmerRequest(req.user._id, req.params.id);
   return res
@@ -49,15 +44,17 @@ export const deleteFarmerRequestController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, 'Farmer request deleted'));
 });
 
-// GET /api/farmer-request (admin)
+// ── Admin: Get all ─────────────────────────────────────────────────────────
 export const getAllFarmerRequestsController = asyncHandler(async (req, res) => {
-  const requests = await getAllFarmerRequests();
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10));
+  const requests = await getAllFarmerRequests({ page, limit });
   return res
     .status(200)
     .json(new ApiResponse(200, requests, 'Farmer requests retrieved'));
 });
 
-// GET /api/farmer-request/:id (admin)
+// ── Admin: Get by ID ───────────────────────────────────────────────────────
 export const getFarmerRequestByIdController = asyncHandler(async (req, res) => {
   const request = await getFarmerRequestById(req.params.id);
   return res
@@ -65,7 +62,7 @@ export const getFarmerRequestByIdController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, request, 'Farmer request retrieved'));
 });
 
-// PATCH /api/farmer-request/:id/approve (admin)
+// ── Admin: Approve ─────────────────────────────────────────────────────────
 export const approveFarmerRequestController = asyncHandler(async (req, res) => {
   const result = await approveFarmerRequest(req.params.id, {
     reviewedBy: req.user._id,
@@ -76,7 +73,7 @@ export const approveFarmerRequestController = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, 'Farmer request approved'));
 });
 
-// PATCH /api/farmer-request/:id/reject (admin)
+// ── Admin: Reject ────────────────────────────────────────────────────────
 export const rejectFarmerRequestController = asyncHandler(async (req, res) => {
   const request = await rejectFarmerRequest(req.params.id, {
     reviewedBy: req.user._id,

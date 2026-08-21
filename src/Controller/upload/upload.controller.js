@@ -7,10 +7,7 @@ import { User } from '../../model/user.model.js';
 
 export const uploadProfileImage = asyncHandler(async (req, res) => {
   if (!req.file) {
-    throw new ApiError(
-      400,
-      "No image file provided. Use the field name 'avatar'."
-    );
+    throw new ApiError(400, "No image file provided. Use the field name 'avatar'.");
   }
 
   validateImageFile(req.file);
@@ -23,7 +20,7 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate(
     req.user._id,
     { avatar: { url, publicId } },
-    { new: true, runValidators: false }
+    { new: true }
   ).select('fullName email avatar');
 
   if (!updatedUser) {
@@ -44,10 +41,7 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
 
 export const updateProfileImage = asyncHandler(async (req, res) => {
   if (!req.file) {
-    throw new ApiError(
-      400,
-      "No image file provided. Use the field name 'avatar'."
-    );
+    throw new ApiError(400, "No image file provided. Use the field name 'avatar'.");
   }
 
   validateImageFile(req.file);
@@ -66,7 +60,7 @@ export const updateProfileImage = asyncHandler(async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate(
     req.user._id,
     { avatar: { url, publicId } },
-    { new: true, runValidators: false }
+    { new: true }
   ).select('fullName email avatar');
 
   return res
@@ -90,11 +84,9 @@ export const deleteProfileImage = asyncHandler(async (req, res) => {
 
   await cloudinaryService.deleteFile(user.avatar.publicId);
 
-  // FIXED: Use $set to reset to default shape instead of $unset
   await User.findByIdAndUpdate(
     req.user._id,
-    { $set: { avatar: { url: null, publicId: null } } },
-    { runValidators: false }
+    { $set: { avatar: { url: null, publicId: null } } }
   );
 
   return res

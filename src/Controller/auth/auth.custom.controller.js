@@ -5,14 +5,12 @@ import { User } from '../../model/user.model.js';
 import {
   generateAccessToken,
   generateRefreshToken,
-  getRefreshTokenSecret,
 } from '../../utils/tokenGenerator.js';
-import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
 };
 
 const setRefreshCookie = (res, refreshToken) => {
@@ -25,15 +23,13 @@ const setRefreshCookie = (res, refreshToken) => {
 const issueTokens = async (user, res) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
-
   await user.setRefreshToken(refreshToken);
   setRefreshCookie(res, refreshToken);
-
   return { accessToken, refreshToken, user };
 };
 
 export const registerVisitor = asyncHandler(async (req, res) => {
-  const normalizedEmail = req.body.email.toLowerCase();
+  const normalizedEmail = req.body.email.toLowerCase().trim();
   const existingUser = await User.findOne({ email: normalizedEmail });
 
   if (existingUser) {
@@ -44,7 +40,7 @@ export const registerVisitor = asyncHandler(async (req, res) => {
     ...req.body,
     email: normalizedEmail,
     role: 'visitor',
-    ChangePassword: false,
+    changePassword: false,
   });
 
   const tokens = await issueTokens(user, res);
@@ -58,18 +54,18 @@ export const registerVisitor = asyncHandler(async (req, res) => {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
-          ChangePassword: user.ChangePassword,
+          changePassword: user.changePassword,
         },
         accessToken: tokens.accessToken,
       },
-      'User created'
+      'Visitor registered successfully'
     )
   );
 });
 
 export const loginVisitor = asyncHandler(async (req, res) => {
   const user = await User.findOne({
-    email: req.body.email.toLowerCase(),
+    email: req.body.email.toLowerCase().trim(),
   }).select('+password');
 
   if (!user) {
@@ -81,12 +77,12 @@ export const loginVisitor = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid email or password');
   }
 
-  if (user.ChangePassword) {
+  if (user.changePassword) {
     return res.status(403).json({
       success: false,
       message: 'Password change required',
       data: {
-        ChangePassword: true,
+        changePassword: true,
         user: {
           id: user._id,
           fullName: user.fullName,
@@ -108,7 +104,7 @@ export const loginVisitor = asyncHandler(async (req, res) => {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
-          ChangePassword: user.ChangePassword,
+          changePassword: user.changePassword,
         },
         accessToken: tokens.accessToken,
       },
@@ -117,9 +113,8 @@ export const loginVisitor = asyncHandler(async (req, res) => {
   );
 });
 
-export const changePassword = asyncHandler(async (req, res) => {
+export const changePasswordVisitor = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('+password');
-
   if (!user) {
     throw new ApiError(404, 'User not found');
   }
@@ -130,7 +125,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password = req.body.newPassword;
-  user.ChangePassword = false;
+  user.changePassword = false;
   await user.save();
 
   return res
